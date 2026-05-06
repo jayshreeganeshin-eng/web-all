@@ -6,6 +6,7 @@ Handles full website mirroring with asset downloading and link rewriting.
 import asyncio
 import os
 import re
+import time
 from pathlib import Path
 from typing import Optional, Set, Dict, List
 from urllib.parse import urlparse, urljoin, urlunparse
@@ -13,6 +14,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 import cssutils
 from tqdm import tqdm
+from .analytics import AnalyticsEngine, PageStats, PerformanceMonitor
 
 class WebsiteCloner:
     """Main cloning engine that downloads entire websites."""
@@ -28,6 +30,7 @@ class WebsiteCloner:
         include_patterns: Optional[List[str]] = None,
         exclude_patterns: Optional[List[str]] = None,
         respect_robots: bool = True,
+        generate_report: bool = True,
     ):
         self.base_url = base_url
         self.output_dir = Path(output_dir)
@@ -38,10 +41,15 @@ class WebsiteCloner:
         self.include_patterns = include_patterns
         self.exclude_patterns = exclude_patterns
         self.respect_robots = respect_robots
+        self.generate_report = generate_report
         
         self.visited_urls: Set[str] = set()
         self.failed_urls: Set[str] = set()
         self.domain = urlparse(base_url).netloc
+        
+        # Analytics and performance tracking
+        self.analytics = AnalyticsEngine(str(output_dir)) if generate_report else None
+        self.perf_monitor = PerformanceMonitor()
         
     def normalize_url(self, url: str) -> str:
         """Normalize URL for deduplication."""
@@ -80,16 +88,29 @@ class WebsiteCloner:
     async def fetch_page(self, session: aiohttp.ClientSession, url: str) -> Optional[str]:
         """Fetch a single page."""
         headers = {"User-Agent": self.user_agent}
+        start_time = time.time()
         try:
             async with session.get(url, headers=headers, timeout=30) as response:
+                elapsed_ms = int((time.time() - start_time) * 1000)
                 if response.status == 200:
+                    if self.perf_monitor:
+                        self.perf_monitor.record_request(True, elapsed_ms)
                     return await response.text()
                 else:
                     self.failed_urls.add(url)
+                    if self.analytics:
+                        self.analytics.add_failed_url(url)
+                    if self.perf_monitor:
+                        self.perf_monitor.record_request(False, elapsed_ms)
                     return None
         except Exception as e:
             print(f"Error fetching {url}: {e}")
             self.failed_urls.add(url)
+            if self.analytics:
+                self.analytics.add_failed_url(url)
+            elapsed_ms = int((time.time() - start_time) * 1000)
+            if self.perf_monitor:
+                self.perf_monitor.record_request(False, elapsed_ms)
             return None
     
     def extract_links(self, html: str, base_url: str) -> List[str]:
@@ -193,6 +214,19 @@ class WebsiteCloner:
                             with open(save_path, 'w', encoding='utf-8') as f:
                                 f.write(rewritten_html)
                                 
+                            # Track analytics
+                            if self.analytics:
+                                soup = BeautifulSoup(html, 'lxml')
+                                stats = PageStats(
+                                    url=url,
+                                    title=soup.title.string if soup.title else "",
+                                    size_bytes=len(rewritten_html.encode('utf-8')),
+                                    images_count=len(soup.find_all('img')),
+                                    links_count=len(soup.find_all(['a', 'link'])),
+                                    text_length=len(soup.get_text(strip=True)),
+                                )
+                                self.analytics.add_page(stats)
+                                
                             progress_bar.update(1)
                             
                             # Extract and queue new links
@@ -208,6 +242,16 @@ class WebsiteCloner:
             workers = [asyncio.create_task(worker()) for _ in range(self.concurrency)]
             await asyncio.gather(*workers)
             progress_bar.close()
+            
+        # Generate report and performance stats
+        if self.analytics and self.generate_report:
+            report = self.analytics.analyze_site(self.base_url)
+            self.analytics.save_report(report)
+            self.analytics.print_summary(report)
+            
+        if self.perf_monitor:
+            self.perf_monitor.stop()
+            self.perf_monitor.print_stats()
             
         print(f"\nCloning complete!")
         print(f"Visited: {len(self.visited_urls)} pages")
