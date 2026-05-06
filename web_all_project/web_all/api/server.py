@@ -1,6 +1,6 @@
 """
 FastAPI REST API server for web-all.
-Provides endpoints for cloning jobs, status tracking, and file downloads.
+Provides endpoints for cloning jobs, status tracking, AI configuration, and file downloads.
 """
 
 import os
@@ -18,11 +18,21 @@ from pydantic import BaseModel
 
 from ..core.cloner import SiteCloner
 from ..core.invisible import InvisibleContentEngine
+from ..utils.ai_engine import AIEngine, get_available_providers, validate_api_key
 
-app = FastAPI(title="web-all API", version="2.0.0")
+app = FastAPI(title="web-all API", version="3.0.0")
 
 # Job storage
 jobs: Dict[str, Dict[str, Any]] = {}
+
+# AI Configuration storage (in-memory, can be persisted)
+ai_config: Dict[str, Any] = {
+    "enabled": False,
+    "provider": "ollama",
+    "api_key": "",
+    "model": "",
+    "base_url": "http://localhost:11434"
+}
 
 # Output directory
 OUTPUT_DIR = Path("./output")
@@ -35,7 +45,16 @@ class CloneRequest(BaseModel):
     depth: int = 2
     use_tor: bool = False
     discover_invisible: bool = False
+    ai_enabled: bool = False
     output_name: Optional[str] = None
+
+
+class AIConfigRequest(BaseModel):
+    enabled: bool
+    provider: str
+    api_key: Optional[str] = ""
+    model: Optional[str] = ""
+    base_url: Optional[str] = "http://localhost:11434"
 
 
 async def run_clone_job(job_id: str, request: CloneRequest):
@@ -46,6 +65,12 @@ async def run_clone_job(job_id: str, request: CloneRequest):
         
         output_name = request.output_name or f"clone_{job_id[:8]}"
         output_path = OUTPUT_DIR / output_name
+        
+        # Initialize AI engine if enabled
+        ai_engine = None
+        if request.ai_enabled and ai_config.get("enabled"):
+            ai_engine = AIEngine(ai_config)
+            jobs[job_id]["ai_status"] = "AI enabled"
         
         cloner = SiteCloner(
             output_dir=str(output_path),
@@ -61,6 +86,17 @@ async def run_clone_job(job_id: str, request: CloneRequest):
             (output_path / "expanded.html").write_text(expanded_html)
         
         manifest = await cloner.clone_site(request.url, mode=request.mode)
+        
+        # Run AI analysis if enabled
+        if ai_engine:
+            try:
+                index_html = output_path / "index.html"
+                if index_html.exists():
+                    html_content = index_html.read_text(encoding='utf-8')
+                    await ai_engine.analyze_and_enhance(html_content, request.url, output_path)
+                    jobs[job_id]["ai_completed"] = True
+            except Exception as ai_error:
+                jobs[job_id]["ai_error"] = str(ai_error)
         
         jobs[job_id].update({
             "status": "completed",
@@ -174,11 +210,73 @@ async def list_jobs():
                 "job_id": job_id,
                 "status": job["status"],
                 "url": job["request"]["url"],
-                "created_at": job["created_at"]
+                "created_at": job["created_at"],
+                "ai_enabled": job.get("ai_status", "") != "",
+                "ai_completed": job.get("ai_completed", False)
             }
             for job_id, job in jobs.items()
         ]
     }
+
+
+@app.get("/api/v1/ai/providers")
+async def get_ai_providers():
+    """Get available AI providers."""
+    return {
+        "providers": get_available_providers(),
+        "current_config": ai_config
+    }
+
+
+@app.post("/api/v1/ai/config")
+async def set_ai_config(config: AIConfigRequest):
+    """Configure AI settings."""
+    global ai_config
+    
+    # Validate API key if required
+    if config.enabled and config.provider != "ollama":
+        if not config.api_key or len(config.api_key) < 10:
+            raise HTTPException(status_code=400, detail="Valid API key required for this provider")
+    
+    ai_config = {
+        "enabled": config.enabled,
+        "provider": config.provider,
+        "api_key": config.api_key or "",
+        "model": config.model or "",
+        "base_url": config.base_url or "http://localhost:11434"
+    }
+    
+    return {
+        "message": "AI configuration updated successfully",
+        "config": ai_config
+    }
+
+
+@app.get("/api/v1/ai/config")
+async def get_ai_config():
+    """Get current AI configuration (without exposing full API key)."""
+    safe_config = ai_config.copy()
+    if safe_config.get("api_key") and len(safe_config["api_key"]) > 4:
+        safe_config["api_key"] = safe_config["api_key"][:4] + "..." + safe_config["api_key"][-4:]
+    return safe_config
+
+
+@app.post("/api/v1/ai/test")
+async def test_ai_connection():
+    """Test AI connection with a simple prompt."""
+    if not ai_config.get("enabled"):
+        raise HTTPException(status_code=400, detail="AI is not enabled")
+    
+    try:
+        engine = AIEngine(ai_config)
+        response = await engine.summarize_content("<p>Hello, this is a test.</p>", "test://url")
+        return {
+            "success": True,
+            "message": "AI connection successful",
+            "sample_response": response[:200] if response else "No response generated"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI test failed: {str(e)}")
 
 
 def start_api(host: str = "0.0.0.0", port: int = 8000, gui_dir: Optional[str] = None):
