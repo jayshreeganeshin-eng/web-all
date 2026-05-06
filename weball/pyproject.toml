@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weball"
+version = "4.0.0"
+description = "AI-Powered Universal Website Cloner & Crawler - Production Ready with Frontend, Backend, Admin Panel, and User Management"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "weball Team", email = "team@weball.dev"}
+]
+keywords = [
+    "web scraper",
+    "website cloner",
+    "crawler",
+    "tor",
+    "onion",
+    "downloader",
+    "archive",
+    "ai",
+    "automation"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+    "playwright>=1.40.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "python-multipart>=0.0.6",
+    "aiohttp>=3.9.0",
+    "yt-dlp>=2023.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+
+[project.scripts]
+weball = "weball.cli:main"
+weball-noob = "weball.weball_noob:main"
+
+[project.urls]
+Homepage = "https://github.com/weball/weball"
+Documentation = "https://github.com/weball/weball#readme"
+Repository = "https://github.com/weball/weball.git"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["weball*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
