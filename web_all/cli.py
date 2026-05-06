@@ -90,6 +90,24 @@ def main():
     serve_parser.add_argument('--port', '-p', type=int, default=8000, help='Server port')
     serve_parser.add_argument('--host', default='0.0.0.0', help='Server host')
     
+    # Report command
+    report_parser = subparsers.add_parser('report', help='Generate reports for cloned site')
+    report_parser.add_argument('input_dir', help='Directory to analyze')
+    report_parser.add_argument('--output', '-o', help='Output directory for reports')
+    report_parser.add_argument('--type', choices=['all', 'seo', 'stats'], default='all', help='Report type')
+    
+    # SEO command
+    seo_parser = subparsers.add_parser('seo', help='Analyze SEO of cloned site')
+    seo_parser.add_argument('input_dir', help='Directory to analyze')
+    seo_parser.add_argument('--output', '-o', help='Output file for SEO report')
+    
+    # Batch command
+    batch_parser = subparsers.add_parser('batch', help='Process multiple URLs')
+    batch_parser.add_argument('--urls', nargs='+', required=True, help='List of URLs to process')
+    batch_parser.add_argument('--output', '-o', default='./batch_output', help='Output directory')
+    batch_parser.add_argument('--depth', '-d', type=int, default=3, help='Crawl depth')
+    batch_parser.add_argument('--mode', choices=['clone', 'images', 'text'], default='clone', help='Processing mode')
+    
     args = parser.parse_args()
     
     if args.command == 'clone':
@@ -231,6 +249,73 @@ def main():
         except ImportError:
             print("FastAPI not installed. Run: pip install fastapi uvicorn")
             sys.exit(1)
+            
+    elif args.command == 'report':
+        print(f"Generating reports for {args.input_dir}...")
+        from .utils.report_generator import ReportGenerator
+        
+        generator = ReportGenerator(args.input_dir)
+        
+        if args.type == 'all':
+            reports = generator.generate_all_reports(args.output)
+            print("Generated reports:")
+            for format, path in reports.items():
+                print(f"  {format}: {path}")
+        elif args.type == 'seo':
+            from .utils.seo_analyzer import SEOAnalyzer
+            analyzer = SEOAnalyzer(args.input_dir)
+            analyzer.analyze_site()
+            report_path = analyzer.generate_report(args.output)
+            print(f"SEO report saved to: {report_path}")
+        elif args.type == 'stats':
+            report_path = generator.generate_json_report(args.output)
+            print(f"Statistics report saved to: {report_path}")
+            
+    elif args.command == 'seo':
+        print(f"Analyzing SEO for {args.input_dir}...")
+        from .utils.seo_analyzer import SEOAnalyzer
+        
+        analyzer = SEOAnalyzer(args.input_dir)
+        results = analyzer.analyze_site()
+        report_path = analyzer.generate_report(args.output)
+        
+        print(f"\nSEO Analysis Complete!")
+        print(f"Average Score: {results.get('summary', {}).get('average_score', 0)}/100")
+        print(f"Total Pages: {results.get('summary', {}).get('total_pages', 0)}")
+        print(f"Total Issues: {results.get('summary', {}).get('total_issues', 0)}")
+        print(f"Report saved to: {report_path}")
+        
+        if results.get('recommendations'):
+            print("\nTop Recommendations:")
+            for rec in results['recommendations'][:5]:
+                print(f"  - {rec}")
+            
+    elif args.command == 'batch':
+        print(f"Processing {len(args.urls)} URLs in batch mode...")
+        from .cloner import WebsiteCloner
+        from pathlib import Path
+        
+        output_base = Path(args.output)
+        output_base.mkdir(parents=True, exist_ok=True)
+        
+        for i, url in enumerate(args.urls):
+            print(f"\n[{i+1}/{len(args.urls)}] Processing: {url}")
+            
+            output_dir = output_base / f"site_{i}"
+            
+            try:
+                cloner = WebsiteCloner(
+                    base_url=url,
+                    output_dir=str(output_dir),
+                    depth=args.depth,
+                )
+                asyncio.run(cloner.clone_site())
+                print(f"✓ Completed: {url}")
+            except Exception as e:
+                print(f"✗ Failed: {url} - {e}")
+        
+        print(f"\n✅ Batch processing complete!")
+        print(f"Output directory: {output_base}")
             
     else:
         parser.print_help()
