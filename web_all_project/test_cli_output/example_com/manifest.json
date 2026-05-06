@@ -3,7 +3,7 @@
   "base_domain": "example.com",
   "mode": "static",
   "use_tor": false,
-  "timestamp": "2026-05-06T20:09:52.612607",
+  "timestamp": "2026-05-06T20:19:39.152341",
   "settings": {
     "depth": 2,
     "concurrency": 3,

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Projects{% endblock %}
+{% block page_title %}Project Management{% endblock %}
+{% set active_page = 'projects' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">All Projects</h2>
+        <button class="btn btn-primary" data-modal="new-project-modal">
+            <span>➕</span> New Project
+        </button>
+    </div>
+    <div class="card-body">
+        <!-- Filters -->
+        <div class="flex gap-3 mb-4" style="flex-wrap: wrap;">
+            <input type="text" class="form-control" placeholder="Search projects..." style="max-width: 300px;" id="search-projects">
+            <select class="form-control" style="max-width: 200px;" id="filter-status">
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="on_hold">On Hold</option>
+            </select>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Project Name</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Progress</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="projects-table-body">
+                    <tr>
+                        <td colspan="6" class="text-center">Loading projects...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- New Project Modal -->
+<div class="modal-overlay" id="new-project-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Create New Project</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form class="ajax-form" action="/api/projects" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="project-name">Project Name</label>
+                    <input type="text" class="form-control" id="project-name" name="name" required placeholder="Enter project name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="project-description">Description</label>
+                    <textarea class="form-control" id="project-description" name="description" rows="3" placeholder="Enter project description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="project-status">Status</label>
+                    <select class="form-control" id="project-status" name="status">
+                        <option value="active">Active</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="on_hold">On Hold</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Project</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Project Modal -->
+<div class="modal-overlay" id="edit-project-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Project</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form class="ajax-form" action="/api/projects" method="PUT">
+            <div class="modal-body">
+                <input type="hidden" id="edit-project-id" name="id">
+                <div class="form-group">
+                    <label class="form-label" for="edit-project-name">Project Name</label>
+                    <input type="text" class="form-control" id="edit-project-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-project-description">Description</label>
+                    <textarea class="form-control" id="edit-project-description" name="description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-project-status">Status</label>
+                    <select class="form-control" id="edit-project-status" name="status">
+                        <option value="active">Active</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="on_hold">On Hold</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Project</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    document.getElementById('search-projects').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#projects-table-body tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+    
+    // Filter functionality
+    document.getElementById('filter-status').addEventListener('change', function(e) {
+        const filterValue = e.target.value;
+        const rows = document.querySelectorAll('#projects-table-body tr');
+        rows.forEach(row => {
+            if (!filterValue || row.textContent.toLowerCase().includes(filterValue)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

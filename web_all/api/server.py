@@ -12,16 +12,22 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+import os
 
 from ..core.cloner import SiteCloner
 from ..core.invisible import InvisibleContentEngine
 from ..utils.ai_engine import AIEngine, get_available_providers, validate_api_key
 from ..utils.zip_utils import create_zip_archive
+from ..frontend import router as frontend_router
 
 app = FastAPI(title="web-all API", version="3.0.0")
+
+# Include frontend MPA routes
+app.include_router(frontend_router)
 
 # Job storage
 jobs: Dict[str, Dict[str, Any]] = {}

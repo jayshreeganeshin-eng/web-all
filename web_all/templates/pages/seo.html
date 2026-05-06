@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Auto SEO{% endblock %}
+{% block page_title %}AI-Powered Auto SEO{% endblock %}
+{% set active_page = 'seo' %}
+
+{% block content %}
+<div class="alert alert-info">
+    <strong>🤖 AI-Powered SEO</strong>
+    <span>Our AI analyzes your website and generates optimized meta tags, descriptions, keywords, and content recommendations.</span>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Run SEO Audit</h2>
+    </div>
+    <div class="card-body">
+        <form class="ajax-form" action="/api/seo/analyze" method="POST">
+            <div class="form-group">
+                <label class="form-label" for="seo-url">Website URL</label>
+                <input type="url" class="form-control" id="seo-url" name="url" required placeholder="https://example.com">
+                <div class="form-text">Enter the URL you want to analyze and optimize</div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="seo-keywords">Target Keywords (optional)</label>
+                <input type="text" class="form-control" id="seo-keywords" name="keywords" placeholder="keyword1, keyword2, keyword3">
+                <div class="form-text">Comma-separated list of target keywords</div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="seo-ai-provider">AI Provider</label>
+                <select class="form-control" id="seo-ai-provider" name="ai_provider">
+                    <option value="ollama">Ollama (Local)</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="groq">Groq</option>
+                    <option value="huggingface">HuggingFace</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-lg">
+                <span>🚀</span> Start SEO Analysis
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div class="card" id="seo-results" style="display: none;">
+    <div class="card-header">
+        <h2 class="card-title">SEO Analysis Results</h2>
+        <button class="btn btn-sm btn-secondary" onclick="copyToClipboard(JSON.stringify(seoResults, null, 2))">
+            📋 Copy Results
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="tabs">
+            <button class="tab active" data-tab="seo-meta">Meta Tags</button>
+            <button class="tab" data-tab="seo-content">Content Suggestions</button>
+            <button class="tab" data-tab="seo-keywords">Keywords</button>
+            <button class="tab" data-tab="seo-issues">Issues Found</button>
+        </div>
+        
+        <div id="seo-meta" class="tab-content">
+            <div id="meta-tags-content"></div>
+        </div>
+        
+        <div id="seo-content" class="tab-content hidden">
+            <div id="content-suggestions"></div>
+        </div>
+        
+        <div id="seo-keywords" class="tab-content hidden">
+            <div id="keywords-content"></div>
+        </div>
+        
+        <div id="seo-issues" class="tab-content hidden">
+            <div id="issues-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Audits -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Recent SEO Audits</h2>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>URL</th>
+                        <th>Date</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="seo-audits-table">
+                    <tr>
+                        <td colspan="5" class="text-center">No recent audits</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let seoResults = {};
+
+// Handle form submission
+document.querySelector('form[action="/api/seo/analyze"]').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Analyzing...';
+    
+    try {
+        const response = await fetch('/api/seo/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            seoResults = result;
+            displaySEOResults(result);
+            document.getElementById('seo-results').style.display = 'block';
+            dashboard.showAlert('Success', 'SEO analysis completed!', 'success');
+        } else {
+            dashboard.showAlert('Error', result.detail || 'Analysis failed', 'danger');
+        }
+    } catch (error) {
+        dashboard.showAlert('Error', error.message, 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>🚀</span> Start SEO Analysis';
+    }
+});
+
+function displaySEOResults(result) {
+    // Meta Tags
+    if (result.meta_tags) {
+        document.getElementById('meta-tags-content').innerHTML = `
+            <div class="form-group">
+                <label class="form-label">Title Tag</label>
+                <div class="form-control" style="background: #f7fafc;">${result.meta_tags.title || 'N/A'}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Meta Description</label>
+                <div class="form-control" style="background: #f7fafc;">${result.meta_tags.description || 'N/A'}</div>
+            </div>
+            ${result.meta_tags.keywords ? `
+            <div class="form-group">
+                <label class="form-label">Meta Keywords</label>
+                <div class="form-control" style="background: #f7fafc;">${result.meta_tags.keywords}</div>
+            </div>
+            ` : ''}
+        `;
+    }
+    
+    // Content Suggestions
+    if (result.content_suggestions) {
+        document.getElementById('content-suggestions').innerHTML = `
+            <div class="alert alert-success">${result.content_suggestions}</div>
+        `;
+    }
+    
+    // Keywords
+    if (result.suggested_keywords && result.suggested_keywords.length > 0) {
+        document.getElementById('keywords-content').innerHTML = `
+            <div class="flex gap-2" style="flex-wrap: wrap;">
+                ${result.suggested_keywords.map(kw => `<span class="badge badge-primary">${kw}</span>`).join('')}
+            </div>
+        `;
+    }
+    
+    // Issues
+    if (result.issues && result.issues.length > 0) {
+        document.getElementById('issues-content').innerHTML = `
+            <div class="flex" style="flex-direction: column; gap: 0.5rem;">
+                ${result.issues.map(issue => `
+                    <div class="alert alert-${issue.severity === 'high' ? 'danger' : issue.severity === 'medium' ? 'warning' : 'info'}">
+                        <strong>${issue.title}</strong><br>
+                        ${issue.description}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+</script>
+{% endblock %}
