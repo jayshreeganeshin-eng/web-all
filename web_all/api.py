@@ -4,9 +4,7 @@ Provides REST API and serves the web GUI.
 """
 
 import asyncio
-import json
 import uuid
-from pathlib import Path
 from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +14,7 @@ import uvicorn
 
 
 class CloneJob(BaseModel):
+    """Clone job request model."""
     url: str
     mode: str = "clone"
     output: str = "./output"
@@ -26,8 +25,9 @@ class CloneJob(BaseModel):
 
 
 class JobStatus(BaseModel):
+    """Job status response model."""
     job_id: str
-    status: str  # pending, running, completed, failed
+    status: str
     progress: int = 0
     message: str = ""
     output_path: Optional[str] = None
@@ -51,10 +51,10 @@ async def create_job(job: CloneJob):
         "params": job.dict(),
         "output_path": None,
     }
-    
+
     # Start job in background
     asyncio.create_task(run_job(job_id, job))
-    
+
     return {"job_id": job_id, "status": "pending"}
 
 
@@ -63,7 +63,7 @@ async def get_job_status(job_id: str):
     """Get job status."""
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job_data = jobs[job_id]
     return JobStatus(**job_data)
 
@@ -73,12 +73,11 @@ async def download_result(job_id: str):
     """Download job result as ZIP."""
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job_data = jobs[job_id]
     if job_data["status"] != "completed" or not job_data["output_path"]:
         raise HTTPException(status_code=400, detail="Job not completed")
-    
-    # TODO: Create ZIP and return
+
     return {"message": "Download coming soon"}
 
 
@@ -87,9 +86,9 @@ async def run_job(job_id: str, job: CloneJob):
     try:
         jobs[job_id]["status"] = "running"
         jobs[job_id]["message"] = "Starting clone..."
-        
+
         from .cloner import WebsiteCloner
-        
+
         cloner = WebsiteCloner(
             base_url=job.url,
             output_dir=job.output,
@@ -97,14 +96,14 @@ async def run_job(job_id: str, job: CloneJob):
             concurrency=job.concurrency,
             delay=job.delay,
         )
-        
+
         await cloner.clone_site()
-        
+
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["progress"] = 100
         jobs[job_id]["message"] = "Completed"
         jobs[job_id]["output_path"] = job.output
-        
+
     except Exception as e:
         jobs[job_id]["status"] = "failed"
         jobs[job_id]["message"] = str(e)

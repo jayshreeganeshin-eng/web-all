@@ -12,20 +12,20 @@ from web_all import SiteCloner, InvisibleContentEngine
 
 class TestSiteCloner:
     """Tests for SiteCloner class"""
-    
+
     def test_init(self):
         """Test SiteCloner initialization"""
         cloner = SiteCloner(output_dir="./test_output", depth=2)
         assert "test_output" in str(cloner.output_dir)
         assert cloner.depth == 2
         assert cloner.concurrency == 3
-    
+
     def test_normalize_url(self):
         """Test URL normalization"""
         cloner = SiteCloner()
         normalized = cloner._normalize_url("https://example.com/page/")
         assert "example.com/page" in normalized
-    
+
     def test_is_same_domain(self):
         """Test domain checking"""
         cloner = SiteCloner()
@@ -37,7 +37,7 @@ class TestSiteCloner:
 
 class TestInvisibleContentEngine:
     """Tests for InvisibleContentEngine class"""
-    
+
     def test_init(self):
         """Test InvisibleContentEngine initialization"""
         engine = InvisibleContentEngine()
@@ -46,7 +46,7 @@ class TestInvisibleContentEngine:
 
 class TestCLI:
     """Tests for CLI functionality"""
-    
+
     def test_clone_command(self):
         """Test clone command execution"""
         import subprocess

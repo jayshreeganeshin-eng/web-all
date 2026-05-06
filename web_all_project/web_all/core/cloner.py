@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 class SiteCloner:
     """Main website cloning engine with Tor support and automatic organization."""
-    
+
     def __init__(
         self,
         output_dir: str = "./output",
@@ -58,15 +58,15 @@ class SiteCloner:
         self.auto_organize = auto_organize
         self.download_all_assets = download_all_assets
         self.save_metadata = save_metadata
-        
+
         self.visited_urls: Set[str] = set()
         self.downloaded_assets: Set[str] = set()
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": self.user_agent})
-        
+
         if use_tor:
             self._setup_tor_proxy()
-        
+
         self.semaphore = asyncio.Semaphore(concurrency)
         self.stats = {
             "pages": 0,
@@ -76,7 +76,7 @@ class SiteCloner:
             "other": 0,
             "errors": 0
         }
-        
+
     def _setup_tor_proxy(self):
         """Configure session to use Tor proxy."""
         proxies = {
@@ -85,7 +85,7 @@ class SiteCloner:
         }
         self.session.proxies.update(proxies)
         logger.info(f"Tor proxy enabled: {self.tor_proxy}")
-        
+
     def _normalize_url(self, url: str) -> str:
         """Normalize URL for deduplication."""
         parsed = urlparse(url)
@@ -94,12 +94,12 @@ class SiteCloner:
         path = parsed.path.rstrip('/') or '/'
         normalized = urlunparse((parsed.scheme, netloc, path, '', '', ''))
         return normalized
-    
+
     def _is_internal_url(self, url: str, base_domain: str) -> bool:
         """Check if URL belongs to the same domain."""
         parsed = urlparse(url)
         return parsed.netloc == base_domain or parsed.netloc.endswith('.' + base_domain)
-    
+
     async def fetch_page(self, url: str) -> Optional[str]:
         """Fetch page content with retry logic."""
         async with self.semaphore:
@@ -107,26 +107,26 @@ class SiteCloner:
                 normalized = self._normalize_url(url)
                 if normalized in self.visited_urls:
                     return None
-                    
+
                 logger.info(f"Fetching: {url}")
-                
+
                 loop = asyncio.get_event_loop()
                 response = await loop.run_in_executor(
-                    None, 
+                    None,
                     lambda: self.session.get(url, timeout=self.timeout)
                 )
-                
+
                 if response.status_code == 200:
                     self.visited_urls.add(normalized)
                     return response.text
                 else:
                     logger.warning(f"Failed to fetch {url}: {response.status_code}")
                     return None
-                    
+
             except Exception as e:
                 logger.error(f"Error fetching {url}: {e}")
                 return None
-    
+
     async def fetch_page_dynamic(self, url: str, scroll_times: int = 3, wait_time: float = 2.0) -> Optional[str]:
         """Fetch page using headless browser for JavaScript rendering."""
         async with self.semaphore:
@@ -134,54 +134,54 @@ class SiteCloner:
                 normalized = self._normalize_url(url)
                 if normalized in self.visited_urls:
                     return None
-                
+
                 logger.info(f"Dynamic fetch: {url}")
-                
+
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(headless=True)
-                    
+
                     context_args = {}
                     if self.use_tor:
                         context_args["proxy"] = {"server": self.tor_proxy}
-                    
+
                     context = await browser.new_context(
                         user_agent=self.user_agent,
                         **context_args
                     )
                     page = await context.new_page()
-                    
+
                     await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
-                    
+
                     # Scroll to trigger lazy loading
                     for i in range(scroll_times):
                         await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                         await asyncio.sleep(wait_time)
-                    
+
                     html = await page.content()
                     await browser.close()
-                    
+
                     self.visited_urls.add(normalized)
                     return html
-                    
+
             except Exception as e:
                 logger.error(f"Dynamic fetch error for {url}: {e}")
                 return None
-    
+
     def extract_links(self, html: str, base_url: str) -> List[str]:
         """Extract all links from HTML."""
         soup = BeautifulSoup(html, 'lxml')
         links = []
-        
+
         for tag in soup.find_all('a', href=True):
             href = tag['href'].strip()
             if href.startswith(('javascript:', 'mailto:', 'tel:', '#')):
                 continue
-            
+
             absolute_url = urljoin(base_url, href)
             links.append(absolute_url)
-        
+
         return links
-    
+
     def extract_assets(self, html: str, base_url: str) -> Dict[str, List[str]]:
         """Extract asset URLs (images, CSS, JS)."""
         soup = BeautifulSoup(html, 'lxml')
@@ -190,30 +190,30 @@ class SiteCloner:
             'css': [],
             'js': []
         }
-        
+
         # Images
         for img in soup.find_all('img', src=True):
             src = img['src'].strip()
             if not src.startswith(('data:', 'javascript:')):
                 assets['images'].append(urljoin(base_url, src))
-        
+
         # CSS
         for link in soup.find_all('link', rel='stylesheet', href=True):
             assets['css'].append(urljoin(base_url, link['href']))
-        
+
         # JS
         for script in soup.find_all('script', src=True):
             assets['js'].append(urljoin(base_url, script['src']))
-        
+
         return assets
-    
+
     def _get_asset_path(self, url: str, asset_type: str) -> Path:
         """Generate organized path for assets."""
         parsed = urlparse(url)
-        
+
         # Create domain-based folder structure
         domain = parsed.netloc.replace('.', '_').replace(':', '_')
-        
+
         if asset_type == 'images':
             subdir = self.output_dir / domain / 'images'
         elif asset_type == 'css':
@@ -222,29 +222,29 @@ class SiteCloner:
             subdir = self.output_dir / domain / 'js'
         else:
             subdir = self.output_dir / domain / 'assets'
-        
+
         # Generate unique filename
         filename = os.path.basename(parsed.path) or f"asset_{hashlib.md5(url.encode()).hexdigest()[:8]}"
-        
+
         # Ensure unique filename
         counter = 0
         base_name, ext = os.path.splitext(filename)
         output_path = subdir / filename
-        
+
         while output_path.exists():
             counter += 1
             output_path = subdir / f"{base_name}_{counter}{ext}"
-        
+
         return output_path
-    
+
     def save_html(self, html: str, url: str, output_path: Path):
         """Save HTML file with rewritten local links and organized structure."""
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         parsed = urlparse(url)
-        
+
         soup = BeautifulSoup(html, 'lxml')
-        
+
         # Rewrite links to work locally
         for tag in soup.find_all(['a', 'img', 'link', 'script'], recursive=True):
             for attr in ['href', 'src']:
@@ -263,31 +263,31 @@ class SiteCloner:
                                 tag[attr] = rel_path
                         except:
                             pass
-        
+
         # Add metadata comment
         meta_comment = f"<!-- Cloned from {url} on {datetime.now().isoformat()} -->\n"
-        
+
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(meta_comment + str(soup))
-        
+
         logger.info(f"Saved: {output_path}")
-    
+
     def save_asset(self, url: str, asset_type: str):
         """Download and save asset with organized folder structure."""
         try:
             if url in self.downloaded_assets:
                 return
-            
+
             response = self.session.get(url, timeout=self.timeout)
             if response.status_code == 200:
                 output_path = self._get_asset_path(url, asset_type)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 with open(output_path, 'wb') as f:
                     f.write(response.content)
-                
+
                 self.downloaded_assets.add(url)
-                
+
                 # Update stats
                 if asset_type == 'images':
                     self.stats['images'] += 1
@@ -297,24 +297,24 @@ class SiteCloner:
                     self.stats['js'] += 1
                 else:
                     self.stats['other'] += 1
-                
+
                 logger.info(f"Downloaded {asset_type}: {output_path.name}")
-                
+
         except Exception as e:
             self.stats['errors'] += 1
             logger.error(f"Failed to download asset {url}: {e}")
-    
+
     async def clone_site(self, start_url: str, mode: str = "static"):
         """Main cloning method - automatically downloads full website with organized structure."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         parsed = urlparse(start_url)
         base_domain = parsed.netloc
-        
+
         # Create domain-based output directory
         domain_dir = self.output_dir / base_domain.replace('.', '_').replace(':', '_')
         domain_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Save comprehensive manifest
         manifest = {
             "start_url": start_url,
@@ -330,30 +330,30 @@ class SiteCloner:
                 "download_all_assets": self.download_all_assets
             }
         }
-        
+
         queue = [(start_url, 0)]
-        
+
         logger.info(f"🚀 Starting clone of {start_url}")
         logger.info(f"   Mode: {mode}, Depth: {self.depth}, Output: {domain_dir}")
-        
+
         while queue:
             current_url, current_depth = queue.pop(0)
-            
+
             if current_depth > self.depth:
                 continue
-            
+
             # Fetch page
             if mode == "dynamic":
                 html = await self.fetch_page_dynamic(current_url)
             else:
                 html = await self.fetch_page(current_url)
-            
+
             if not html:
                 self.stats['errors'] += 1
                 continue
-            
+
             self.stats['pages'] += 1
-            
+
             # Save HTML with organized path
             parsed_current = urlparse(current_url)
             path = parsed_current.path.rstrip('/') or '/index.html'
@@ -361,19 +361,19 @@ class SiteCloner:
                 path = '/index.html'
             if not path.endswith('.html'):
                 path += '/index.html'
-            
+
             # Organize pages by path structure
             relative_path = path.lstrip('/')
             output_file = domain_dir / relative_path
             self.save_html(html, current_url, output_file)
-            
+
             # Extract and download ALL assets by default
             if self.download_all_assets:
                 assets = self.extract_assets(html, current_url)
                 for asset_type, urls in assets.items():
                     for asset_url in urls:  # No limit - download all
                         self.save_asset(asset_url, asset_type)
-            
+
             # Extract links for crawling
             if current_depth < self.depth:
                 links = self.extract_links(html, current_url)
@@ -381,19 +381,19 @@ class SiteCloner:
                     normalized = self._normalize_url(link)
                     if normalized not in self.visited_urls and self._is_internal_url(link, base_domain):
                         queue.append((link, current_depth + 1))
-            
+
             await asyncio.sleep(self.delay)
-        
+
         # Save final comprehensive manifest
         manifest["visited_count"] = len(self.visited_urls)
         manifest["assets_count"] = len(self.downloaded_assets)
         manifest["stats"] = self.stats
         manifest["output_directory"] = str(domain_dir)
-        
+
         manifest_path = domain_dir / "manifest.json"
         with open(manifest_path, 'w', encoding='utf-8') as f:
             json.dump(manifest, f, indent=2, ensure_ascii=False)
-        
+
         # Create README with clone info
         readme_path = domain_dir / "README.txt"
         with open(readme_path, 'w', encoding='utf-8') as f:
@@ -416,7 +416,7 @@ class SiteCloner:
             f.write(f"  /js - All JavaScript files\n")
             f.write(f"  /*.html - Cloned pages\n")
             f.write(f"  manifest.json - Detailed clone information\n")
-        
+
         logger.info(f"\n✅ Clone complete!")
         logger.info(f"   📄 Pages visited: {self.stats['pages']}")
         logger.info(f"   🖼️  Images downloaded: {self.stats['images']}")
@@ -425,5 +425,5 @@ class SiteCloner:
         logger.info(f"   📦 Total assets: {len(self.downloaded_assets)}")
         logger.info(f"   ❌ Errors: {self.stats['errors']}")
         logger.info(f"   📁 Output: {domain_dir}")
-        
+
         return manifest
