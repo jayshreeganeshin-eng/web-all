@@ -1,6 +1,7 @@
 """
 Core cloner engine for static and dynamic websites.
 Supports clearnet and .onion (Tor) sites.
+Auto-downloads full websites with organized folder structure.
 """
 
 import os
@@ -8,9 +9,11 @@ import re
 import json
 import asyncio
 import logging
+import hashlib
 from urllib.parse import urljoin, urlparse, urlunparse
 from typing import Set, List, Optional, Dict, Any
 from pathlib import Path
+from datetime import datetime
 
 try:
     import requests
@@ -26,19 +29,22 @@ logger = logging.getLogger(__name__)
 
 
 class SiteCloner:
-    """Main website cloning engine with Tor support."""
+    """Main website cloning engine with Tor support and automatic organization."""
     
     def __init__(
         self,
         output_dir: str = "./output",
         depth: int = 2,
-        concurrency: int = 3,
-        delay: float = 1.0,
+        concurrency: int = 5,
+        delay: float = 0.5,
         user_agent: Optional[str] = None,
         use_tor: bool = False,
         tor_proxy: str = "http://127.0.0.1:9050",
         timeout: int = 30,
-        respect_robots: bool = True
+        respect_robots: bool = False,
+        auto_organize: bool = True,
+        download_all_assets: bool = True,
+        save_metadata: bool = True
     ):
         self.output_dir = Path(output_dir)
         self.depth = depth
@@ -49,6 +55,9 @@ class SiteCloner:
         self.tor_proxy = tor_proxy
         self.timeout = timeout
         self.respect_robots = respect_robots
+        self.auto_organize = auto_organize
+        self.download_all_assets = download_all_assets
+        self.save_metadata = save_metadata
         
         self.visited_urls: Set[str] = set()
         self.downloaded_assets: Set[str] = set()
@@ -59,6 +68,14 @@ class SiteCloner:
             self._setup_tor_proxy()
         
         self.semaphore = asyncio.Semaphore(concurrency)
+        self.stats = {
+            "pages": 0,
+            "images": 0,
+            "css": 0,
+            "js": 0,
+            "other": 0,
+            "errors": 0
+        }
         
     def _setup_tor_proxy(self):
         """Configure session to use Tor proxy."""
@@ -190,76 +207,134 @@ class SiteCloner:
         
         return assets
     
+    def _get_asset_path(self, url: str, asset_type: str) -> Path:
+        """Generate organized path for assets."""
+        parsed = urlparse(url)
+        
+        # Create domain-based folder structure
+        domain = parsed.netloc.replace('.', '_').replace(':', '_')
+        
+        if asset_type == 'images':
+            subdir = self.output_dir / domain / 'images'
+        elif asset_type == 'css':
+            subdir = self.output_dir / domain / 'css'
+        elif asset_type == 'js':
+            subdir = self.output_dir / domain / 'js'
+        else:
+            subdir = self.output_dir / domain / 'assets'
+        
+        # Generate unique filename
+        filename = os.path.basename(parsed.path) or f"asset_{hashlib.md5(url.encode()).hexdigest()[:8]}"
+        
+        # Ensure unique filename
+        counter = 0
+        base_name, ext = os.path.splitext(filename)
+        output_path = subdir / filename
+        
+        while output_path.exists():
+            counter += 1
+            output_path = subdir / f"{base_name}_{counter}{ext}"
+        
+        return output_path
+    
     def save_html(self, html: str, url: str, output_path: Path):
-        """Save HTML file with rewritten local links."""
+        """Save HTML file with rewritten local links and organized structure."""
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # Basic link rewriting (can be enhanced)
         parsed = urlparse(url)
-        base_path = parsed.path
         
         soup = BeautifulSoup(html, 'lxml')
         
-        # Rewrite relative links
+        # Rewrite links to work locally
         for tag in soup.find_all(['a', 'img', 'link', 'script'], recursive=True):
             for attr in ['href', 'src']:
                 if tag.has_attr(attr):
                     value = tag[attr]
-                    if not value.startswith(('http://', 'https://', 'data:', '//')):
-                        # Keep relative paths as-is for now
-                        pass
+                    if value.startswith(('http://', 'https://')):
+                        # Convert absolute URLs to relative paths
+                        try:
+                            asset_parsed = urlparse(value)
+                            if asset_parsed.netloc == parsed.netloc:
+                                # Same domain - make relative
+                                rel_path = os.path.relpath(
+                                    self._get_asset_path(value, 'images' if attr == 'src' else 'css'),
+                                    output_path.parent
+                                )
+                                tag[attr] = rel_path
+                        except:
+                            pass
+        
+        # Add metadata comment
+        meta_comment = f"<!-- Cloned from {url} on {datetime.now().isoformat()} -->\n"
         
         with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(str(soup))
+            f.write(meta_comment + str(soup))
         
         logger.info(f"Saved: {output_path}")
     
     def save_asset(self, url: str, asset_type: str):
-        """Download and save asset."""
+        """Download and save asset with organized folder structure."""
         try:
-            parsed = urlparse(url)
-            filename = os.path.basename(parsed.path) or f"asset_{len(self.downloaded_assets)}"
-            
-            if asset_type == 'images':
-                subdir = 'images'
-            elif asset_type == 'css':
-                subdir = 'css'
-            else:
-                subdir = 'js'
-            
-            output_path = self.output_dir / subdir / filename
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            
             if url in self.downloaded_assets:
                 return
-                
+            
             response = self.session.get(url, timeout=self.timeout)
             if response.status_code == 200:
+                output_path = self._get_asset_path(url, asset_type)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                
                 with open(output_path, 'wb') as f:
                     f.write(response.content)
+                
                 self.downloaded_assets.add(url)
-                logger.info(f"Downloaded asset: {filename}")
+                
+                # Update stats
+                if asset_type == 'images':
+                    self.stats['images'] += 1
+                elif asset_type == 'css':
+                    self.stats['css'] += 1
+                elif asset_type == 'js':
+                    self.stats['js'] += 1
+                else:
+                    self.stats['other'] += 1
+                
+                logger.info(f"Downloaded {asset_type}: {output_path.name}")
                 
         except Exception as e:
+            self.stats['errors'] += 1
             logger.error(f"Failed to download asset {url}: {e}")
     
     async def clone_site(self, start_url: str, mode: str = "static"):
-        """Main cloning method."""
+        """Main cloning method - automatically downloads full website with organized structure."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         parsed = urlparse(start_url)
         base_domain = parsed.netloc
         
-        # Save manifest
+        # Create domain-based output directory
+        domain_dir = self.output_dir / base_domain.replace('.', '_').replace(':', '_')
+        domain_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save comprehensive manifest
         manifest = {
             "start_url": start_url,
             "base_domain": base_domain,
             "mode": mode,
             "use_tor": self.use_tor,
-            "timestamp": str(asyncio.get_event_loop().time())
+            "timestamp": datetime.now().isoformat(),
+            "settings": {
+                "depth": self.depth,
+                "concurrency": self.concurrency,
+                "delay": self.delay,
+                "auto_organize": self.auto_organize,
+                "download_all_assets": self.download_all_assets
+            }
         }
         
         queue = [(start_url, 0)]
+        
+        logger.info(f"🚀 Starting clone of {start_url}")
+        logger.info(f"   Mode: {mode}, Depth: {self.depth}, Output: {domain_dir}")
         
         while queue:
             current_url, current_depth = queue.pop(0)
@@ -274,9 +349,12 @@ class SiteCloner:
                 html = await self.fetch_page(current_url)
             
             if not html:
+                self.stats['errors'] += 1
                 continue
             
-            # Save HTML
+            self.stats['pages'] += 1
+            
+            # Save HTML with organized path
             parsed_current = urlparse(current_url)
             path = parsed_current.path.rstrip('/') or '/index.html'
             if path == '/':
@@ -284,14 +362,17 @@ class SiteCloner:
             if not path.endswith('.html'):
                 path += '/index.html'
             
-            output_file = self.output_dir / path.lstrip('/')
+            # Organize pages by path structure
+            relative_path = path.lstrip('/')
+            output_file = domain_dir / relative_path
             self.save_html(html, current_url, output_file)
             
-            # Extract and download assets
-            assets = self.extract_assets(html, current_url)
-            for asset_type, urls in assets.items():
-                for asset_url in urls[:10]:  # Limit per page for speed
-                    self.save_asset(asset_url, asset_type)
+            # Extract and download ALL assets by default
+            if self.download_all_assets:
+                assets = self.extract_assets(html, current_url)
+                for asset_type, urls in assets.items():
+                    for asset_url in urls:  # No limit - download all
+                        self.save_asset(asset_url, asset_type)
             
             # Extract links for crawling
             if current_depth < self.depth:
@@ -303,12 +384,46 @@ class SiteCloner:
             
             await asyncio.sleep(self.delay)
         
-        # Save final manifest
+        # Save final comprehensive manifest
         manifest["visited_count"] = len(self.visited_urls)
         manifest["assets_count"] = len(self.downloaded_assets)
+        manifest["stats"] = self.stats
+        manifest["output_directory"] = str(domain_dir)
         
-        with open(self.output_dir / "manifest.json", 'w') as f:
-            json.dump(manifest, f, indent=2)
+        manifest_path = domain_dir / "manifest.json"
+        with open(manifest_path, 'w', encoding='utf-8') as f:
+            json.dump(manifest, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"Clone complete! Visited {len(self.visited_urls)} pages, downloaded {len(self.downloaded_assets)} assets.")
+        # Create README with clone info
+        readme_path = domain_dir / "README.txt"
+        with open(readme_path, 'w', encoding='utf-8') as f:
+            f.write(f"Website Clone Report\n")
+            f.write(f"====================\n\n")
+            f.write(f"Source URL: {start_url}\n")
+            f.write(f"Cloned on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Mode: {mode}\n")
+            f.write(f"Depth: {self.depth}\n\n")
+            f.write(f"Statistics:\n")
+            f.write(f"  Pages cloned: {self.stats['pages']}\n")
+            f.write(f"  Images downloaded: {self.stats['images']}\n")
+            f.write(f"  CSS files: {self.stats['css']}\n")
+            f.write(f"  JavaScript files: {self.stats['js']}\n")
+            f.write(f"  Other assets: {self.stats['other']}\n")
+            f.write(f"  Errors: {self.stats['errors']}\n\n")
+            f.write(f"Folder Structure:\n")
+            f.write(f"  /images - All images from the website\n")
+            f.write(f"  /css - All stylesheets\n")
+            f.write(f"  /js - All JavaScript files\n")
+            f.write(f"  /*.html - Cloned pages\n")
+            f.write(f"  manifest.json - Detailed clone information\n")
+        
+        logger.info(f"\n✅ Clone complete!")
+        logger.info(f"   📄 Pages visited: {self.stats['pages']}")
+        logger.info(f"   🖼️  Images downloaded: {self.stats['images']}")
+        logger.info(f"   🎨 CSS files: {self.stats['css']}")
+        logger.info(f"   ⚙️  JS files: {self.stats['js']}")
+        logger.info(f"   📦 Total assets: {len(self.downloaded_assets)}")
+        logger.info(f"   ❌ Errors: {self.stats['errors']}")
+        logger.info(f"   📁 Output: {domain_dir}")
+        
         return manifest
