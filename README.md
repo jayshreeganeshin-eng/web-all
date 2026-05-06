@@ -146,6 +146,36 @@ web-all upload ./for-upload --host ftpupload.net --user epiz_XXXXXX --password Y
 | `upload` | Upload to FTP |
 | `deep-crawl` | Crawl with sitemap |
 | `serve` | Start web GUI |
+| `report` | Generate statistics & SEO reports |
+| `seo` | Analyze SEO of cloned site |
+| `batch` | Process multiple URLs |
+
+---
+
+## 🆕 New Features
+
+### Report Generation
+```bash
+# Generate comprehensive reports (JSON, CSV, HTML)
+web-all report ./cloned_site --type all
+
+# Generate only SEO analysis
+web-all report ./cloned_site --type seo
+```
+
+### SEO Analysis
+```bash
+# Full SEO audit with score and recommendations
+web-all seo ./cloned_site -o ./seo_report.html
+```
+
+### Batch Processing
+```bash
+# Clone multiple sites at once
+web-all batch --urls https://site1.com https://site2.com -o ./output
+```
+
+See [FEATURES_UPDATE.md](FEATURES_UPDATE.md) for complete details.
 
 ---
 
