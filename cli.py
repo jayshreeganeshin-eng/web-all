@@ -10,6 +10,9 @@ import asyncio
 import os
 from pathlib import Path
 
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
 from web_all.core.cloner import SiteCloner
 from web_all.core.invisible import InvisibleContentEngine
 from web_all.api.server import start_api

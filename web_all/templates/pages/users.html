@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Users{% endblock %}
+{% block page_title %}User Management{% endblock %}
+{% set active_page = 'users' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">All Users</h2>
+        <button class="btn btn-primary" data-modal="new-user-modal">
+            <span>➕</span> Add User
+        </button>
+    </div>
+    <div class="card-body">
+        <!-- Filters -->
+        <div class="flex gap-3 mb-4" style="flex-wrap: wrap;">
+            <input type="text" class="form-control" placeholder="Search users..." style="max-width: 300px;" id="search-users">
+            <select class="form-control" style="max-width: 200px;" id="filter-role">
+                <option value="">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="user">User</option>
+                <option value="editor">Editor</option>
+            </select>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body">
+                    <tr>
+                        <td colspan="6" class="text-center">Loading users...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- New User Modal -->
+<div class="modal-overlay" id="new-user-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Add New User</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form class="ajax-form" action="/api/users" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="user-username">Username</label>
+                    <input type="text" class="form-control" id="user-username" name="username" required placeholder="Enter username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="user-email">Email</label>
+                    <input type="email" class="form-control" id="user-email" name="email" required placeholder="Enter email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="user-password">Password</label>
+                    <input type="password" class="form-control" id="user-password" name="password" required placeholder="Enter password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="user-role">Role</label>
+                    <select class="form-control" id="user-role" name="role">
+                        <option value="user">User</option>
+                        <option value="editor">Editor</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="edit-user-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit User</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form class="ajax-form" action="/api/users" method="PUT">
+            <div class="modal-body">
+                <input type="hidden" id="edit-user-id" name="id">
+                <div class="form-group">
+                    <label class="form-label" for="edit-user-username">Username</label>
+                    <input type="text" class="form-control" id="edit-user-username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-user-email">Email</label>
+                    <input type="email" class="form-control" id="edit-user-email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-user-role">Role</label>
+                    <select class="form-control" id="edit-user-role" name="role">
+                        <option value="user">User</option>
+                        <option value="editor">Editor</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-user-status">Status</label>
+                    <select class="form-control" id="edit-user-status" name="status">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update User</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadUsers();
+    
+    // Search functionality
+    document.getElementById('search-users').addEventListener('input', filterUsers);
+    document.getElementById('filter-role').addEventListener('change', filterUsers);
+});
+
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/users');
+        if (response.ok) {
+            const users = await response.json();
+            renderUsersTable(users);
+        }
+    } catch (error) {
+        console.error('Failed to load users:', error);
+    }
+}
+
+function renderUsersTable(users) {
+    const tbody = document.getElementById('users-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = users.map(user => `
+        <tr>
+            <td>
+                <div class="flex items-center gap-2">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.875rem;">${(user.username || 'U')[0].toUpperCase()}</div>
+                    <div>
+                        <div class="font-weight-600">${user.username}</div>
+                        <div class="text-sm text-gray-500">${user.name || ''}</div>
+                    </div>
+                </div>
+            </td>
+            <td>${user.email}</td>
+            <td><span class="badge badge-${user.role === 'admin' ? 'danger' : user.role === 'editor' ? 'warning' : 'primary'}">${user.role}</span></td>
+            <td><span class="badge badge-${user.status === 'active' ? 'success' : 'danger'}">${user.status}</span></td>
+            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+            <td>
+                <button class="btn btn-sm btn-secondary" onclick="editUser(${user.id})">Edit</button>
+                <button class="btn btn-sm btn-danger" data-confirm-delete data-item-id="${user.id}" data-item-type="user" data-delete-url="/api/users/${user.id}">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterUsers() {
+    const searchTerm = document.getElementById('search-users').value.toLowerCase();
+    const filterRole = document.getElementById('filter-role').value;
+    const rows = document.querySelectorAll('#users-table-body tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const matchesSearch = text.includes(searchTerm);
+        const matchesRole = !filterRole || text.includes(filterRole);
+        row.style.display = (matchesSearch && matchesRole) ? '' : 'none';
+    });
+}
+
+function editUser(id) {
+    dashboard.openModal('edit-user-modal');
+    fetch(`/api/users/${id}`)
+        .then(res => res.json())
+        .then(user => {
+            document.getElementById('edit-user-id').value = user.id;
+            document.getElementById('edit-user-username').value = user.username;
+            document.getElementById('edit-user-email').value = user.email;
+            document.getElementById('edit-user-role').value = user.role;
+            document.getElementById('edit-user-status').value = user.status;
+        });
+}
+</script>
+{% endblock %}

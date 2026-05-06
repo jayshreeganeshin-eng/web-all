@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "web-all"
-version = "1.0.0"
-description = "Universal Website Cloner & Crawler - Download visible and invisible content"
+version = "3.0.0"
+description = "AI-Powered Universal Website Cloner & Crawler with Tor Support"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
@@ -13,13 +13,13 @@ authors = [
     {name = "web-all Team", email = "team@web-all.dev"}
 ]
 keywords = [
-    "website",
-    "cloner",
+    "web scraper",
+    "website cloner",
     "crawler",
-    "scraper",
+    "tor",
+    "onion",
     "downloader",
-    "archive",
-    "mirror"
+    "archive"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -32,29 +32,27 @@ classifiers = [
 ]
 
 dependencies = [
-    "aiohttp>=3.9.0",
+    "requests>=2.31.0",
     "beautifulsoup4>=4.12.0",
-    "lxml>=5.0.0",
+    "lxml>=4.9.0",
     "playwright>=1.40.0",
-    "fastapi>=0.109.0",
-    "uvicorn>=0.27.0",
-    "pydantic>=2.5.0",
-    "tqdm>=4.66.0",
-    "cssutils>=2.9.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
     "python-multipart>=0.0.6",
-    "yt-dlp>=2024.0.0",
+    "aiohttp>=3.9.0",
+    "yt-dlp>=2023.12.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
-    "black>=24.0.0",
-    "ruff>=0.1.0",
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
 ]
 
 [project.scripts]
 web-all = "web_all.cli:main"
-wa = "web_all.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/web-all/web-all"
@@ -67,8 +65,8 @@ include = ["web_all*"]
 
 [tool.black]
 line-length = 100
-target-version = ["py310", "py311", "py312"]
+target-version = ['py310', 'py311', 'py312']
 
-[tool.ruff]
-line-length = 100
-select = ["E", "F", "I", "N", "W"]
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

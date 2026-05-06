@@ -17,31 +17,26 @@ RUN apt-get update && apt-get install -y \
     libxcomposite1 \
     libxdamage1 \
     libxfixes3 \
-    libxkbcommon0 \
     libxrandr2 \
     xdg-utils \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+    --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 # Copy project files
-COPY pyproject.toml README.md ./
+COPY pyproject.toml .
 COPY web_all/ ./web_all/
+COPY cli.py .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -e .
 
 # Install Playwright browsers
 RUN playwright install chromium
-RUN playwright install-deps chromium
 
 # Create output directory
 RUN mkdir -p /app/output
 
-# Expose port for web GUI
+# Expose port
 EXPOSE 8000
 
-# Set volume for output
-VOLUME ["/app/output"]
-
-# Default command: start web server
-CMD ["web-all", "serve", "--host", "0.0.0.0", "--port", "8000"]
+# Default command
+CMD ["python", "cli.py", "serve", "--host", "0.0.0.0", "--port", "8000"]

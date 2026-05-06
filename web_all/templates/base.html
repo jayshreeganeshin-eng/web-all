@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} - WebAll</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="sidebar-logo">
+                <div class="sidebar-logo-icon">🚀</div>
+                <span>WebAll</span>
+            </a>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main</div>
+                <a href="/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <span class="nav-item-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/projects" class="nav-item {% if active_page == 'projects' %}active{% endif %}">
+                    <span class="nav-item-icon">📁</span>
+                    <span>Projects</span>
+                </a>
+                <a href="/tasks" class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
+                    <span class="nav-item-icon">✅</span>
+                    <span>Tasks</span>
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">AI Tools</div>
+                <a href="/seo" class="nav-item {% if active_page == 'seo' %}active{% endif %}">
+                    <span class="nav-item-icon">🔍</span>
+                    <span>Auto SEO</span>
+                </a>
+                <a href="/content" class="nav-item {% if active_page == 'content' %}active{% endif %}">
+                    <span class="nav-item-icon">✍️</span>
+                    <span>Content Generator</span>
+                </a>
+                <a href="/clone" class="nav-item {% if active_page == 'clone' %}active{% endif %}">
+                    <span class="nav-item-icon">🔄</span>
+                    <span>Site Cloner</span>
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Management</div>
+                <a href="/users" class="nav-item {% if active_page == 'users' %}active{% endif %}">
+                    <span class="nav-item-icon">👥</span>
+                    <span>Users</span>
+                </a>
+                <a href="/admin" class="nav-item {% if active_page == 'admin' %}active{% endif %}">
+                    <span class="nav-item-icon">⚙️</span>
+                    <span>Admin</span>
+                </a>
+                <a href="/settings" class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+                    <span class="nav-item-icon">🔧</span>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button class="btn btn-secondary" id="menu-toggle" style="display: none;">☰</button>
+                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+            </div>
+            
+            <div class="top-bar-right">
+                <div class="user-menu">
+                    <div class="user-avatar" id="user-avatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-name">Admin</div>
+                        <div class="user-role" id="user-role">Administrator</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="container" style="padding: 2rem 1.5rem;">
+            <!-- Alert Container -->
+            <div id="alert-container"></div>
+            
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Modals -->
+    {% block modals %}{% endblock %}
+
+    <script src="/static/js/dashboard.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

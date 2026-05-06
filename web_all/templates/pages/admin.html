@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}Admin{% endblock %}
+{% block page_title %}Admin Panel{% endblock %}
+{% set active_page = 'admin' %}
+
+{% block content %}
+<div class="alert alert-warning">
+    <strong>⚠️ Admin Only</strong>
+    <span>This area is restricted to administrators only.</span>
+</div>
+
+<!-- System Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div>
+            <div class="stat-value" id="admin-total-users">0</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-icon primary">👥</div>
+    </div>
+    
+    <div class="stat-card">
+        <div>
+            <div class="stat-value" id="admin-total-projects">0</div>
+            <div class="stat-label">Total Projects</div>
+        </div>
+        <div class="stat-icon success">📁</div>
+    </div>
+    
+    <div class="stat-card">
+        <div>
+            <div class="stat-value" id="admin-storage-used">0 MB</div>
+            <div class="stat-label">Storage Used</div>
+        </div>
+        <div class="stat-icon warning">💾</div>
+    </div>
+    
+    <div class="stat-card">
+        <div>
+            <div class="stat-value" id="admin-api-calls">0</div>
+            <div class="stat-label">API Calls Today</div>
+        </div>
+        <div class="stat-icon danger">📡</div>
+    </div>
+</div>
+
+<!-- System Configuration -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">System Configuration</h2>
+    </div>
+    <div class="card-body">
+        <div class="tabs">
+            <button class="tab active" data-tab="config-general">General</button>
+            <button class="tab" data-tab="config-ai">AI Settings</button>
+            <button class="tab" data-tab="config-security">Security</button>
+            <button class="tab" data-tab="config-backup">Backup</button>
+        </div>
+        
+        <div id="config-general" class="tab-content">
+            <form class="ajax-form" action="/api/admin/config/general" method="POST">
+                <div class="form-group">
+                    <label class="form-label">Site Name</label>
+                    <input type="text" class="form-control" name="site_name" value="WebAll Dashboard">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Default Language</label>
+                    <select class="form-control" name="default_language">
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Timezone</label>
+                    <select class="form-control" name="timezone">
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">Eastern Time</option>
+                        <option value="America/Los_Angeles">Pacific Time</option>
+                        <option value="Europe/London">London</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+            </form>
+        </div>
+        
+        <div id="config-ai" class="tab-content hidden">
+            <form class="ajax-form" action="/api/admin/config/ai" method="POST">
+                <div class="form-group">
+                    <label class="form-label">Default AI Provider</label>
+                    <select class="form-control" name="default_ai_provider">
+                        <option value="ollama">Ollama (Local)</option>
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="groq">Groq</option>
+                        <option value="huggingface">HuggingFace</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">OpenRouter API Key</label>
+                    <input type="password" class="form-control" name="openrouter_api_key" placeholder="sk-or-...">
+                    <div class="form-text">Leave blank to keep current setting</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Groq API Key</label>
+                    <input type="password" class="form-control" name="groq_api_key" placeholder="gsk_...">
+                    <div class="form-text">Leave blank to keep current setting</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ollama Model</label>
+                    <input type="text" class="form-control" name="ollama_model" value="llama3.2">
+                </div>
+                <button type="submit" class="btn btn-primary">Save AI Settings</button>
+            </form>
+        </div>
+        
+        <div id="config-security" class="tab-content hidden">
+            <form class="ajax-form" action="/api/admin/config/security" method="POST">
+                <div class="form-group">
+                    <label class="form-label">Session Timeout (minutes)</label>
+                    <input type="number" class="form-control" name="session_timeout" value="60">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Login Attempts</label>
+                    <input type="number" class="form-control" name="max_login_attempts" value="5">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Require 2FA</label>
+                    <select class="form-control" name="require_2fa">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Security Settings</button>
+            </form>
+        </div>
+        
+        <div id="config-backup" class="tab-content hidden">
+            <div class="form-group">
+                <label class="form-label">Backup Frequency</label>
+                <select class="form-control" name="backup_frequency">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="flex gap-3">
+                <button class="btn btn-primary" onclick="createBackup()">
+                    <span>💾</span> Create Backup Now
+                </button>
+                <button class="btn btn-secondary" onclick="downloadBackup()">
+                    <span>⬇️</span> Download Latest Backup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Log -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Recent Activity</h2>
+        <button class="btn btn-sm btn-secondary" onclick="clearActivityLog()">Clear Log</button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="activity-log-body">
+                    <tr>
+                        <td colspan="4" class="text-center">Loading activity log...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- System Actions -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">System Actions</h2>
+    </div>
+    <div class="card-body">
+        <div class="flex gap-3" style="flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="restartServer()">
+                <span>🔄</span> Restart Server
+            </button>
+            <button class="btn btn-warning" onclick="clearCache()">
+                <span>🗑️</span> Clear Cache
+            </button>
+            <button class="btn btn-danger" onclick="resetDatabase()">
+                <span>⚠️</span> Reset Database
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadAdminStats();
+    loadActivityLog();
+});
+
+async function loadAdminStats() {
+    try {
+        const response = await fetch('/api/admin/stats');
+        if (response.ok) {
+            const stats = await response.json();
+            document.getElementById('admin-total-users').textContent = stats.total_users || 0;
+            document.getElementById('admin-total-projects').textContent = stats.total_projects || 0;
+            document.getElementById('admin-storage-used').textContent = formatBytes(stats.storage_used || 0);
+            document.getElementById('admin-api-calls').textContent = (stats.api_calls_today || 0).toLocaleString();
+        }
+    } catch (error) {
+        console.error('Failed to load admin stats:', error);
+    }
+}
+
+async function loadActivityLog() {
+    try {
+        const response = await fetch('/api/admin/activity-log');
+        if (response.ok) {
+            const logs = await response.json();
+            renderActivityLog(logs);
+        }
+    } catch (error) {
+        console.error('Failed to load activity log:', error);
+    }
+}
+
+function renderActivityLog(logs) {
+    const tbody = document.getElementById('activity-log-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${new Date(log.timestamp).toLocaleString()}</td>
+            <td>${log.user || 'System'}</td>
+            <td><span class="badge badge-primary">${log.action}</span></td>
+            <td>${log.details || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+async function createBackup() {
+    if (!confirm('Create a backup now?')) return;
+    
+    try {
+        const response = await fetch('/api/admin/backup', { method: 'POST' });
+        const result = await response.json();
+        if (response.ok) {
+            dashboard.showAlert('Success', 'Backup created successfully!', 'success');
+        } else {
+            dashboard.showAlert('Error', result.detail || 'Backup failed', 'danger');
+        }
+    } catch (error) {
+        dashboard.showAlert('Error', error.message, 'danger');
+    }
+}
+
+async function downloadBackup() {
+    window.location.href = '/api/admin/backup/download';
+}
+
+async function restartServer() {
+    if (!confirm('Restart the server? This will cause temporary downtime.')) return;
+    
+    try {
+        const response = await fetch('/api/admin/restart', { method: 'POST' });
+        const result = await response.json();
+        if (response.ok) {
+            dashboard.showAlert('Success', 'Server restarting...', 'success');
+        } else {
+            dashboard.showAlert('Error', result.detail || 'Restart failed', 'danger');
+        }
+    } catch (error) {
+        dashboard.showAlert('Error', error.message, 'danger');
+    }
+}
+
+async function clearCache() {
+    if (!confirm('Clear all cached data?')) return;
+    
+    try {
+        const response = await fetch('/api/admin/cache/clear', { method: 'DELETE' });
+        const result = await response.json();
+        if (response.ok) {
+            dashboard.showAlert('Success', 'Cache cleared!', 'success');
+        } else {
+            dashboard.showAlert('Error', result.detail || 'Clear cache failed', 'danger');
+        }
+    } catch (error) {
+        dashboard.showAlert('Error', error.message, 'danger');
+    }
+}
+
+async function resetDatabase() {
+    if (!confirm('⚠️ WARNING: This will delete ALL data! This action cannot be undone. Type "RESET" to confirm.')) return;
+    
+    const confirmation = prompt('Type "RESET" to confirm database reset:');
+    if (confirmation !== 'RESET') {
+        dashboard.showAlert('Cancelled', 'Database reset cancelled', 'info');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/admin/database/reset', { method: 'POST' });
+        const result = await response.json();
+        if (response.ok) {
+            dashboard.showAlert('Success', 'Database reset complete', 'success');
+        } else {
+            dashboard.showAlert('Error', result.detail || 'Reset failed', 'danger');
+        }
+    } catch (error) {
+        dashboard.showAlert('Error', error.message, 'danger');
+    }
+}
+
+async function clearActivityLog() {
+    if (!confirm('Clear the activity log?')) return;
+    
+    try {
+        const response = await fetch('/api/admin/activity-log/clear', { method: 'DELETE' });
+        const result = await response.json();
+        if (response.ok) {
+            dashboard.showAlert('Success', 'Activity log cleared', 'success');
+            loadActivityLog();
+        } else {
+            dashboard.showAlert('Error', result.detail || 'Clear failed', 'danger');
+        }
+    } catch (error) {
+        dashboard.showAlert('Error', error.message, 'danger');
+    }
+}
+</script>
+{% endblock %}
