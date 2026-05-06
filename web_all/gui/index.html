@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>web-all - Universal Website Cloner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status-box {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 6px;
+            display: none;
+        }
+        .status-box.active {
+            display: block;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .log {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        .download-btn {
+            background: #10b981;
+            margin-top: 1rem;
+            display: none;
+        }
+        .download-btn.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕷️ web-all</h1>
+        <p class="subtitle">Universal Website Cloner & Crawler</p>
+        
+        <form id="cloneForm">
+            <div class="form-group">
+                <label for="url">Website URL</label>
+                <input type="url" id="url" required placeholder="https://example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="mode">Mode</label>
+                <select id="mode">
+                    <option value="clone">Full Clone (with assets)</option>
+                    <option value="scroll">Scroll & Capture</option>
+                    <option value="images-only">Images Only</option>
+                    <option value="text-only">Text Only</option>
+                    <option value="deep-crawl">Deep Crawl</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="depth">Crawl Depth</label>
+                <input type="number" id="depth" value="5" min="0" max="10">
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="discover_invisible" style="width: auto;">
+                    Discover Invisible Content
+                </label>
+            </div>
+            
+            <button type="submit" id="startBtn">Start Download</button>
+        </form>
+        
+        <div class="status-box" id="statusBox">
+            <h3>Status: <span id="statusText">Pending</span></h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p id="statusMessage">Waiting to start...</p>
+            <div class="log" id="log"></div>
+            <button class="download-btn" id="downloadBtn">Download Result</button>
+        </div>
+    </div>
+
+    <script>
+        let currentJobId = null;
+        let pollInterval = null;
+
+        document.getElementById('cloneForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = document.getElementById('url').value;
+            const mode = document.getElementById('mode').value;
+            const depth = parseInt(document.getElementById('depth').value);
+            const discover_invisible = document.getElementById('discover_invisible').checked;
+            
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = true;
+            startBtn.textContent = 'Starting...';
+            
+            try {
+                const response = await fetch('/api/v1/jobs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url,
+                        mode,
+                        output: './output',
+                        depth,
+                        concurrency: 5,
+                        delay: 1.0,
+                        discover_invisible
+                    })
+                });
+                
+                const data = await response.json();
+                currentJobId = data.job_id;
+                
+                document.getElementById('statusBox').classList.add('active');
+                log(`Job started: ${currentJobId}`);
+                
+                // Start polling
+                pollInterval = setInterval(pollStatus, 2000);
+                
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                startBtn.disabled = false;
+                startBtn.textContent = 'Start Download';
+            }
+        });
+
+        async function pollStatus() {
+            if (!currentJobId) return;
+            
+            try {
+                const response = await fetch(`/api/v1/jobs/${currentJobId}`);
+                const data = await response.json();
+                
+                document.getElementById('statusText').textContent = data.status.toUpperCase();
+                document.getElementById('progressFill').style.width = `${data.progress}%`;
+                document.getElementById('statusMessage').textContent = data.message;
+                
+                log(`[${data.status}] ${data.message} (${data.progress}%)`);
+                
+                if (data.status === 'completed') {
+                    clearInterval(pollInterval);
+                    document.getElementById('downloadBtn').classList.add('active');
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('startBtn').textContent = 'Start Download';
+                    log('✅ Download completed!');
+                } else if (data.status === 'failed') {
+                    clearInterval(pollInterval);
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('startBtn').textContent = 'Start Download';
+                    log('❌ Job failed!');
+                }
+                
+            } catch (error) {
+                log(`Poll error: ${error.message}`);
+            }
+        }
+
+        function log(message) {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            window.location.href = `/api/v1/download/${currentJobId}`;
+        });
+    </script>
+</body>
+</html>

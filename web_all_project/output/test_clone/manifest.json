@@ -1,0 +1,9 @@
+{
+  "start_url": "https://example.com",
+  "base_domain": "example.com",
+  "mode": "static",
+  "use_tor": false,
+  "timestamp": "3490.770945758",
+  "visited_count": 1,
+  "assets_count": 0
+}

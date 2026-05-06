@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>web-all - Universal Website Cloner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 1.1em; }
+        .content { padding: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status-box {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .status-box.active { display: block; }
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .status-queued { background: #fff3cd; color: #856404; }
+        .status-running { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .progress-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .log-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .download-btn:hover { background: #218838; }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+        .feature {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .feature-icon { font-size: 2em; margin-bottom: 10px; }
+        .feature h3 { font-size: 1em; color: #333; }
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 web-all</h1>
+            <p>Universal Website Cloner & Crawler with Tor Support</p>
+        </div>
+        
+        <div class="content">
+            <form id="cloneForm">
+                <div class="form-group">
+                    <label for="url">Target URL *</label>
+                    <input type="text" id="url" name="url" placeholder="https://example.com or http://example.onion" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mode">Operation Mode</label>
+                    <select id="mode" name="mode">
+                        <option value="static">Static Clone (Fast)</option>
+                        <option value="dynamic">Dynamic Clone (JavaScript)</option>
+                        <option value="images">Images Only</option>
+                        <option value="text">Text Only</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="depth">Crawl Depth</label>
+                    <input type="number" id="depth" name="depth" min="0" max="10" value="2">
+                </div>
+                
+                <div class="form-group">
+                    <label>Options</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="tor" name="tor">
+                            <label for="tor">Use Tor (.onion)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="discover_invisible" name="discover_invisible">
+                            <label for="discover_invisible">Discover Invisible Content</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn" id="submitBtn">🚀 Start Cloning</button>
+            </form>
+            
+            <div id="statusBox" class="status-box">
+                <div class="status-header">
+                    <h3>Job Status</h3>
+                    <span id="statusBadge" class="status-badge status-queued">Queued</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <div id="jobInfo"></div>
+                <div id="logOutput" class="log-output" style="display:none;"></div>
+                <a id="downloadLink" class="download-btn" style="display:none;" href="#">⬇️ Download Result</a>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🕸️</div>
+                    <h3>Full Site Clone</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🧅</div>
+                    <h3>Tor/.onion Support</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Hidden Content</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📸</div>
+                    <h3>Image Downloader</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📝</div>
+                    <h3>Text Extractor</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Dynamic JS Sites</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let jobId = null;
+        let pollInterval = null;
+
+        document.getElementById('cloneForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = document.getElementById('url').value;
+            const mode = document.getElementById('mode').value;
+            const depth = parseInt(document.getElementById('depth').value);
+            const tor = document.getElementById('tor').checked;
+            const discover_invisible = document.getElementById('discover_invisible').checked;
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Starting...';
+
+            try {
+                const response = await fetch('/api/v1/clone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url,
+                        mode: mode === 'images' ? 'static' : mode === 'text' ? 'static' : mode,
+                        depth,
+                        use_tor: tor,
+                        discover_invisible
+                    })
+                });
+
+                const data = await response.json();
+                jobId = data.job_id;
+
+                document.getElementById('statusBox').classList.add('active');
+                document.getElementById('logOutput').style.display = 'block';
+                
+                startPolling();
+            } catch (error) {
+                alert('Error starting job: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Start Cloning';
+            }
+        });
+
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            
+            pollInterval = setInterval(async () => {
+                if (!jobId) return;
+
+                try {
+                    const response = await fetch(`/api/v1/jobs/${jobId}`);
+                    const data = await response.json();
+
+                    updateStatus(data);
+
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        document.getElementById('submitBtn').disabled = false;
+                        document.getElementById('submitBtn').textContent = '🚀 Start Cloning';
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 2000);
+        }
+
+        function updateStatus(data) {
+            const badge = document.getElementById('statusBadge');
+            const progress = document.getElementById('progressFill');
+            const jobInfo = document.getElementById('jobInfo');
+            const downloadLink = document.getElementById('downloadLink');
+
+            badge.className = `status-badge status-${data.status}`;
+            badge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+
+            if (data.status === 'running') {
+                progress.style.width = '60%';
+                jobInfo.innerHTML = `<p>Started: ${data.started_at || 'N/A'}</p>`;
+            } else if (data.status === 'completed') {
+                progress.style.width = '100%';
+                jobInfo.innerHTML = `
+                    <p>✅ Completed!</p>
+                    <p>Pages: ${data.manifest?.visited_count || 0} | Assets: ${data.manifest?.assets_count || 0}</p>
+                `;
+                if (data.download_url) {
+                    downloadLink.href = data.download_url;
+                    downloadLink.style.display = 'inline-block';
+                }
+            } else if (data.status === 'failed') {
+                progress.style.width = '0%';
+                jobInfo.innerHTML = `<p style="color:red;">❌ Error: ${data.error || 'Unknown error'}</p>`;
+            } else if (data.status === 'queued') {
+                progress.style.width = '20%';
+                jobInfo.innerHTML = `<p>Waiting to start...</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
