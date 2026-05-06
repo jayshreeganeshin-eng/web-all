@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - web_all</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">🚀 web_all</div>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/admin">Admin</a></li>
+                <li><a href="/logout">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <h1>User Dashboard</h1>
+        
+        <section class="dashboard-section">
+            <h2>My Projects</h2>
+            <button id="newProjectBtn" class="btn btn-primary">+ New Project</button>
+            
+            <div id="projectsList" class="projects-grid">
+                <!-- Projects will be loaded here -->
+                <p>Loading projects...</p>
+            </div>
+        </section>
+
+        <section class="dashboard-section">
+            <h2>Recent SEO Analyses</h2>
+            <div id="seoAnalysesList" class="analyses-list">
+                <!-- Analyses will be loaded here -->
+            </div>
+        </section>
+
+        <section class="dashboard-section">
+            <h2>Generated Content</h2>
+            <div id="contentList" class="content-list">
+                <!-- Content will be loaded here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- New Project Modal -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Create New Project</h2>
+            <form id="projectForm">
+                <div class="form-group">
+                    <label for="projectName">Project Name</label>
+                    <input type="text" id="projectName" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectUrl">Website URL</label>
+                    <input type="url" id="projectUrl" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectDesc">Description</label>
+                    <textarea id="projectDesc"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="cloneMode">Clone Mode</label>
+                    <select id="cloneMode">
+                        <option value="static">Static</option>
+                        <option value="dynamic">Dynamic (JavaScript)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="useTor"> Use Tor Proxy
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Project</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
