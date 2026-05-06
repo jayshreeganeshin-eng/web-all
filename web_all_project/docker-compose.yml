@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  web-all:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output
+      - ./data:/app/data
+    environment:
+      - WEB_ALL_HOST=0.0.0.0
+      - WEB_ALL_PORT=8000
+      - WEB_ALL_DEBUG=false
+      - WEB_ALL_LOG_LEVEL=INFO
+      - WEB_ALL_LOG_FORMAT=json
+      # AI Configuration (optional)
+      # - WEB_ALL_AI_ENABLED=true
+      # - WEB_ALL_AI_PROVIDER=openrouter
+      # - WEB_ALL_AI_API_KEY=${OPENROUTER_API_KEY}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - web-all-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - web-all-network
+    profiles:
+      - full
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - web-all-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+    networks:
+      - web-all-network
+    profiles:
+      - monitoring
+
+networks:
+  web-all-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
