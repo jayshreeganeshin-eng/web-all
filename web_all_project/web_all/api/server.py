@@ -1,6 +1,6 @@
 """
-FastAPI REST API server for web-all.
-Provides endpoints for cloning jobs, status tracking, AI configuration, and file downloads.
+FastAPI REST API server for web-all v4.0.
+Provides endpoints for cloning jobs, status tracking, AI configuration, user authentication, and admin panel.
 """
 
 import os
@@ -11,17 +11,31 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Header, Request
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from ..core.cloner import SiteCloner
 from ..core.invisible import InvisibleContentEngine
 from ..utils.ai_engine import AIEngine, get_available_providers, validate_api_key
 from ..utils.zip_utils import create_zip_archive
+from ..utils.auth import AuthManager, UserRole
 
-app = FastAPI(title="web-all API", version="3.0.0")
+app = FastAPI(title="web-all API", version="4.0.0")
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize authentication manager
+auth_manager = AuthManager()
 
 # Job storage
 jobs: Dict[str, Dict[str, Any]] = {}
@@ -38,6 +52,35 @@ ai_config: Dict[str, Any] = {
 # Output directory
 OUTPUT_DIR = Path("./output")
 OUTPUT_DIR.mkdir(exist_ok=True)
+
+
+# Dependency to get current user from token
+async def get_current_user(authorization: Optional[str] = Header(None)):
+    """Extract and verify JWT token from Authorization header."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    
+    token = authorization.split(" ")[1]
+    user_info = auth_manager.verify_token(token)
+    return user_info
+
+
+async def require_auth(authorization: Optional[str] = Header(None)):
+    """Require authentication for endpoint."""
+    user = await get_current_user(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return user
+
+
+async def require_admin(authorization: Optional[str] = Header(None)):
+    """Require admin role for endpoint."""
+    user = await get_current_user(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if user["role"] not in [UserRole.ADMIN.value, UserRole.SUPER_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
 
 
 class CloneRequest(BaseModel):
@@ -58,11 +101,29 @@ class AIConfigRequest(BaseModel):
     base_url: Optional[str] = "http://localhost:11434"
 
 
-async def run_clone_job(job_id: str, request: CloneRequest):
+class UserRegisterRequest(BaseModel):
+    username: str
+    password: str
+    email: str
+
+
+class UserLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+async def run_clone_job(job_id: str, request: CloneRequest, user_id: Optional[str] = None):
     """Background task to run cloning job."""
     try:
         jobs[job_id]["status"] = "running"
         jobs[job_id]["started_at"] = datetime.now().isoformat()
+        if user_id:
+            jobs[job_id]["user_id"] = user_id
         
         output_name = request.output_name or f"clone_{job_id[:8]}"
         output_path = OUTPUT_DIR / output_name
@@ -121,24 +182,104 @@ async def root():
 
 
 @app.post("/api/v1/clone")
-async def create_clone_job(request: CloneRequest, background_tasks: BackgroundTasks):
+async def create_clone_job(
+    request: CloneRequest, 
+    background_tasks: BackgroundTasks,
+    user: Optional[dict] = Depends(get_current_user)
+):
     """Create a new cloning job."""
     job_id = str(uuid.uuid4())
+    
+    user_id = user["user_id"] if user else None
     
     jobs[job_id] = {
         "id": job_id,
         "request": request.dict(),
         "status": "queued",
-        "created_at": datetime.now().isoformat()
+        "created_at": datetime.now().isoformat(),
+        "user_id": user_id,
+        "username": user["username"] if user else "anonymous"
     }
     
-    background_tasks.add_task(run_clone_job, job_id, request)
+    background_tasks.add_task(run_clone_job, job_id, request, user_id)
     
     return {
         "job_id": job_id,
         "status": "queued",
         "message": "Job created successfully"
     }
+
+
+# ==================== AUTHENTICATION ENDPOINTS ====================
+
+@app.post("/api/v1/auth/register")
+async def register_user(data: UserRegisterRequest):
+    """Register a new user."""
+    # Check if username already exists
+    existing_user = auth_manager.create_user(
+        username=data.username,
+        password=data.password,
+        email=data.email,
+        role=UserRole.USER.value
+    )
+    
+    if not existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    return {
+        "message": "User registered successfully",
+        "user": {
+            "id": existing_user.id,
+            "username": existing_user.username,
+            "email": existing_user.email,
+            "role": existing_user.role
+        }
+    }
+
+
+@app.post("/api/v1/auth/login")
+async def login_user(data: UserLoginRequest):
+    """Login and get JWT token."""
+    result = auth_manager.authenticate(data.username, data.password)
+    
+    if not result:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    return {
+        "message": "Login successful",
+        "token": result["token"],
+        "user": result["user"]
+    }
+
+
+@app.get("/api/v1/auth/me")
+async def get_current_user_info(user: dict = Depends(require_auth)):
+    """Get current user information."""
+    return {"user": user}
+
+
+@app.post("/api/v1/auth/change-password")
+async def change_password(
+    data: ChangePasswordRequest,
+    user: dict = Depends(require_auth)
+):
+    """Change user password."""
+    success = auth_manager.change_password(
+        user["user_id"],
+        data.old_password,
+        data.new_password
+    )
+    
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to change password")
+    
+    return {"message": "Password changed successfully"}
+
+
+@app.post("/api/v1/auth/logout")
+async def logout_user():
+    """Logout (client should discard token)."""
+    return {"message": "Logged out successfully"}
 
 
 @app.get("/api/v1/jobs/{job_id}")
@@ -322,6 +463,126 @@ async def test_ai_connection():
         raise HTTPException(status_code=500, detail=f"AI test failed: {str(e)}")
 
 
+# ==================== ADMIN PANEL ENDPOINTS ====================
+
+@app.get("/api/v1/admin/users")
+async def list_all_users(admin: dict = Depends(require_admin)):
+    """List all users (admin only)."""
+    return {"users": auth_manager.list_users()}
+
+
+@app.get("/api/v1/admin/users/{user_id}")
+async def get_user_details(user_id: str, admin: dict = Depends(require_admin)):
+    """Get user details (admin only)."""
+    user = auth_manager.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role,
+            "created_at": user.created_at,
+            "last_login": user.last_login,
+            "is_active": user.is_active
+        }
+    }
+
+
+@app.post("/api/v1/admin/users/{user_id}/toggle-active")
+async def toggle_user_active(user_id: str, admin: dict = Depends(require_admin)):
+    """Toggle user active status (admin only)."""
+    user = auth_manager.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    auth_manager.update_user(user_id, is_active=not user.is_active)
+    return {"message": f"User {'activated' if not user.is_active else 'deactivated'}"}
+
+
+@app.delete("/api/v1/admin/users/{user_id}")
+async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
+    """Delete user (admin only)."""
+    if user_id == admin["user_id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    
+    success = auth_manager.delete_user(user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User deleted successfully"}
+
+
+@app.get("/api/v1/admin/jobs")
+async def list_all_jobs(admin: dict = Depends(require_admin)):
+    """List all jobs across all users (admin only)."""
+    return {
+        "jobs": [
+            {
+                "job_id": job_id,
+                "status": job["status"],
+                "url": job["request"]["url"],
+                "created_at": job["created_at"],
+                "username": job.get("username", "anonymous"),
+                "user_id": job.get("user_id"),
+                "ai_enabled": job.get("ai_status", "") != "",
+                "ai_completed": job.get("ai_completed", False)
+            }
+            for job_id, job in jobs.items()
+        ]
+    }
+
+
+@app.get("/api/v1/admin/stats")
+async def get_system_stats(admin: dict = Depends(require_admin)):
+    """Get system statistics (admin only)."""
+    total_users = len(auth_manager.users)
+    total_jobs = len(jobs)
+    completed_jobs = sum(1 for j in jobs.values() if j["status"] == "completed")
+    failed_jobs = sum(1 for j in jobs.values() if j["status"] == "failed")
+    running_jobs = sum(1 for j in jobs.values() if j["status"] == "running")
+    
+    return {
+        "total_users": total_users,
+        "total_jobs": total_jobs,
+        "completed_jobs": completed_jobs,
+        "failed_jobs": failed_jobs,
+        "running_jobs": running_jobs,
+        "ai_enabled": ai_config.get("enabled", False),
+        "ai_provider": ai_config.get("provider", "none")
+    }
+
+
+@app.post("/api/v1/admin/create-user")
+async def admin_create_user(
+    data: UserRegisterRequest,
+    role: str = UserRole.USER.value,
+    admin: dict = Depends(require_admin)
+):
+    """Create a new user (admin only)."""
+    existing_user = auth_manager.create_user(
+        username=data.username,
+        password=data.password,
+        email=data.email,
+        role=role
+    )
+    
+    if not existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    return {
+        "message": "User created successfully",
+        "user": {
+            "id": existing_user.id,
+            "username": existing_user.username,
+            "email": existing_user.email,
+            "role": existing_user.role
+        }
+    }
+
+
 def start_api(host: str = "0.0.0.0", port: int = 8000, gui_dir: Optional[str] = None):
     """Start the API server with optional GUI serving."""
     import uvicorn
@@ -330,9 +591,14 @@ def start_api(host: str = "0.0.0.0", port: int = 8000, gui_dir: Optional[str] = 
     if gui_dir and os.path.exists(gui_dir):
         app.mount("/", StaticFiles(directory=gui_dir, html=True), name="gui")
     
-    print(f"Starting web-all API on http://{host}:{port}")
+    print(f"Starting web-all API v4.0 on http://{host}:{port}")
+    print(f"   API Docs: http://{host}:{port}/docs")
     if gui_dir:
-        print(f"Serving GUI from {gui_dir}")
+        print(f"   Serving GUI from {gui_dir}")
+    print(f"\nDefault admin credentials:")
+    print(f"   Username: admin")
+    print(f"   Password: admin123")
+    print(f"   ⚠️  Change password immediately after first login!")
     
     uvicorn.run(app, host=host, port=port)
 

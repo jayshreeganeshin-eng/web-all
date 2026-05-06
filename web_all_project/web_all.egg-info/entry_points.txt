@@ -1,0 +1,2 @@
+[console_scripts]
+web-all = web_all.cli:main
