@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>web-all v3.0 - AI-Powered Website Cloner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 1.1em; }
+        .version-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-top: 10px;
+        }
+        .content { padding: 30px; }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #f0f0f0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        /* AI Panel */
+        .ai-panel {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            color: white;
+        }
+        .ai-panel h3 { margin-bottom: 15px; }
+        .ai-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .ai-status.enabled { background: #28a745; }
+        .ai-status.disabled { background: #dc3545; }
+        
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .provider-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        .provider-card:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .provider-card.selected {
+            border-color: white;
+            background: rgba(255,255,255,0.2);
+        }
+        .provider-card h4 { margin-bottom: 5px; }
+        .provider-card p { font-size: 0.85em; opacity: 0.9; }
+        
+        .status-box {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .status-box.active { display: block; }
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .status-queued { background: #fff3cd; color: #856404; }
+        .status-running { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .progress-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .log-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .download-btn:hover { background: #218838; }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+        .feature {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .feature-icon { font-size: 2em; margin-bottom: 10px; }
+        .feature h3 { font-size: 0.9em; color: #333; }
+        
+        .alert {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8em; }
+            .content { padding: 20px; }
+            .tabs { flex-wrap: wrap; }
+            .checkbox-group { flex-direction: column; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 web-all</h1>
+            <p>AI-Powered Universal Website Cloner & Crawler</p>
+            <span class="version-badge">v3.0.0 with AI Integration</span>
+        </div>
+        
+        <div class="content">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('clone')">🚀 Clone Website</button>
+                <button class="tab-btn" onclick="switchTab('ai')">🤖 AI Settings</button>
+                <button class="tab-btn" onclick="switchTab('jobs')">📋 Job History</button>
+            </div>
+            
+            <!-- Clone Tab -->
+            <div id="cloneTab" class="tab-content active">
+                <div class="ai-panel" id="aiStatusPanel">
+                    <h3>🤖 AI Enhancement <span id="aiStatusBadge" class="ai-status disabled">Disabled</span></h3>
+                    <p>Enable AI for automatic summarization, tagging, and data extraction. Configure in AI Settings tab.</p>
+                </div>
+                
+                <form id="cloneForm">
+                    <div class="form-group">
+                        <label for="url">Target URL *</label>
+                        <input type="text" id="url" name="url" placeholder="https://example.com or http://example.onion" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mode">Operation Mode</label>
+                        <select id="mode" name="mode">
+                            <option value="static">Static Clone (Fast)</option>
+                            <option value="dynamic">Dynamic Clone (JavaScript)</option>
+                            <option value="images">Images Only</option>
+                            <option value="text">Text Only</option>
+                            <option value="deep-crawl">Deep Crawl (All Pages)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="depth">Crawl Depth (0 = current page only)</label>
+                        <input type="number" id="depth" name="depth" min="0" max="10" value="2">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Options</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="tor" name="tor">
+                                <label for="tor">🧅 Use Tor (.onion sites)</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="discover_invisible" name="discover_invisible">
+                                <label for="discover_invisible">🔍 Discover Invisible Content</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="ai_enabled" name="ai_enabled">
+                                <label for="ai_enabled">🤖 Enable AI Analysis</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="alertBox" class="alert"></div>
+                    
+                    <button type="submit" class="btn" id="submitBtn">🚀 Start Cloning</button>
+                </form>
+                
+                <div id="statusBox" class="status-box">
+                    <div class="status-header">
+                        <h3>Job Status</h3>
+                        <span id="statusBadge" class="status-badge status-queued">Queued</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <div id="jobInfo"></div>
+                    <div id="logOutput" class="log-output" style="display:none;"></div>
+                    <a id="downloadLink" class="download-btn" style="display:none;" href="#">⬇️ Download Result</a>
+                </div>
+            </div>
+            
+            <!-- AI Settings Tab -->
+            <div id="aiTab" class="tab-content">
+                <div class="ai-panel">
+                    <h3>🤖 AI Configuration</h3>
+                    <p>Choose your AI provider. Works with free APIs or local Ollama.</p>
+                </div>
+                
+                <form id="aiConfigForm">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="aiEnabled" style="width: auto;"> 
+                            Enable AI Features
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Select AI Provider</label>
+                        <div class="provider-grid" id="providerGrid">
+                            <div class="provider-card" data-provider="ollama" onclick="selectProvider('ollama')">
+                                <h4>🦙 Ollama (Local)</h4>
+                                <p>Completely free, runs locally. No API key needed.</p>
+                            </div>
+                            <div class="provider-card" data-provider="groq" onclick="selectProvider('groq')">
+                                <h4>⚡ Groq Cloud</h4>
+                                <p>Free tier available. Super fast Llama models.</p>
+                            </div>
+                            <div class="provider-card" data-provider="openrouter" onclick="selectProvider('openrouter')">
+                                <h4>🌐 OpenRouter</h4>
+                                <p>Free tier with multiple model choices.</p>
+                            </div>
+                            <div class="provider-card" data-provider="huggingface" onclick="selectProvider('huggingface')">
+                                <h4>🤗 HuggingFace</h4>
+                                <p>Free inference API for many models.</p>
+                            </div>
+                        </div>
+                        <input type="hidden" id="selectedProvider" value="ollama">
+                    </div>
+                    
+                    <div class="form-group" id="apiKeyGroup" style="display:none;">
+                        <label for="apiKey">API Key</label>
+                        <input type="text" id="apiKey" placeholder="Paste your API key here">
+                        <small style="color: #666;">Get free keys from provider websites. Key is stored locally only.</small>
+                    </div>
+                    
+                    <div class="form-group" id="modelGroup">
+                        <label for="aiModel">Model (optional)</label>
+                        <input type="text" id="aiModel" placeholder="Leave empty for default">
+                        <small style="color: #666;">Examples: llama3, mistral-7b, etc.</small>
+                    </div>
+                    
+                    <div class="form-group" id="baseUrlGroup" style="display:none;">
+                        <label for="baseUrl">Custom Base URL</label>
+                        <input type="text" id="baseUrl" placeholder="http://localhost:11434" value="http://localhost:11434">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">💾 Save AI Configuration</button>
+                    <button type="button" class="btn btn-secondary" onclick="testAIConnection()" style="margin-top: 10px;">🧪 Test Connection</button>
+                </form>
+                
+                <div id="aiAlert" class="alert"></div>
+            </div>
+            
+            <!-- Jobs Tab -->
+            <div id="jobsTab" class="tab-content">
+                <h3>📋 Recent Jobs</h3>
+                <div id="jobsList" style="margin-top: 20px;">
+                    <p>Loading jobs...</p>
+                </div>
+                <button class="btn btn-secondary" onclick="loadJobs()" style="margin-top: 20px;">🔄 Refresh Jobs</button>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🕸️</div>
+                    <h3>Full Site Clone</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🧅</div>
+                    <h3>Tor/.onion Support</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Hidden Content</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📸</div>
+                    <h3>Image Downloader</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📝</div>
+                    <h3>Text Extractor</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI Analysis</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Dynamic JS Sites</h3>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🏷️</div>
+                    <h3>Auto Tagging</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let jobId = null;
+        let pollInterval = null;
+        let selectedProvider = 'ollama';
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'jobs') {
+                loadJobs();
+            }
+        }
+
+        // Provider selection
+        function selectProvider(provider) {
+            selectedProvider = provider;
+            document.getElementById('selectedProvider').value = provider;
+            
+            document.querySelectorAll('.provider-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.querySelector(`[data-provider="${provider}"]`).classList.add('selected');
+            
+            // Show/hide API key field
+            const apiKeyGroup = document.getElementById('apiKeyGroup');
+            const baseUrlGroup = document.getElementById('baseUrlGroup');
+            
+            if (provider === 'ollama') {
+                apiKeyGroup.style.display = 'none';
+                baseUrlGroup.style.display = 'block';
+            } else {
+                apiKeyGroup.style.display = 'block';
+                baseUrlGroup.style.display = 'none';
+            }
+        }
+
+        // Load AI config on page load
+        async function loadAIConfig() {
+            try {
+                const response = await fetch('/api/v1/ai/config');
+                const config = await response.json();
+                
+                document.getElementById('aiEnabled').checked = config.enabled;
+                document.getElementById('selectedProvider').value = config.provider || 'ollama';
+                document.getElementById('aiModel').value = config.model || '';
+                document.getElementById('baseUrl').value = config.base_url || 'http://localhost:11434';
+                
+                if (config.api_key && config.api_key !== '') {
+                    document.getElementById('apiKey').value = config.api_key;
+                }
+                
+                selectProvider(config.provider || 'ollama');
+                updateAIStatusBadge(config.enabled);
+            } catch (error) {
+                console.error('Failed to load AI config:', error);
+            }
+        }
+
+        // Update AI status badge
+        function updateAIStatusBadge(enabled) {
+            const badge = document.getElementById('aiStatusBadge');
+            if (enabled) {
+                badge.className = 'ai-status enabled';
+                badge.textContent = 'Enabled';
+            } else {
+                badge.className = 'ai-status disabled';
+                badge.textContent = 'Disabled';
+            }
+        }
+
+        // AI Config form submit
+        document.getElementById('aiConfigForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const alertBox = document.getElementById('aiAlert');
+            
+            try {
+                const response = await fetch('/api/v1/ai/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enabled: document.getElementById('aiEnabled').checked,
+                        provider: document.getElementById('selectedProvider').value,
+                        api_key: document.getElementById('apiKey').value,
+                        model: document.getElementById('aiModel').value,
+                        base_url: document.getElementById('baseUrl').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alertBox.className = 'alert alert-success';
+                    alertBox.textContent = '✅ AI configuration saved successfully!';
+                    alertBox.style.display = 'block';
+                    updateAIStatusBadge(document.getElementById('aiEnabled').checked);
+                } else {
+                    throw new Error(data.detail || 'Failed to save configuration');
+                }
+            } catch (error) {
+                alertBox.className = 'alert alert-error';
+                alertBox.textContent = '❌ Error: ' + error.message;
+                alertBox.style.display = 'block';
+            }
+        });
+
+        // Test AI connection
+        async function testAIConnection() {
+            const alertBox = document.getElementById('aiAlert');
+            alertBox.className = 'alert alert-info';
+            alertBox.textContent = '🧪 Testing AI connection...';
+            alertBox.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/v1/ai/test', { method: 'POST' });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alertBox.className = 'alert alert-success';
+                    alertBox.textContent = '✅ AI connection successful! Response: ' + data.sample_response;
+                } else {
+                    throw new Error(data.detail || 'Test failed');
+                }
+            } catch (error) {
+                alertBox.className = 'alert alert-error';
+                alertBox.textContent = '❌ Test failed: ' + error.message;
+            }
+        }
+
+        // Clone form submit
+        document.getElementById('cloneForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = document.getElementById('url').value;
+            const mode = document.getElementById('mode').value;
+            const depth = parseInt(document.getElementById('depth').value);
+            const tor = document.getElementById('tor').checked;
+            const discover_invisible = document.getElementById('discover_invisible').checked;
+            const ai_enabled = document.getElementById('ai_enabled').checked;
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Starting...';
+
+            const alertBox = document.getElementById('alertBox');
+            alertBox.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/v1/clone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url,
+                        mode,
+                        depth,
+                        use_tor: tor,
+                        discover_invisible,
+                        ai_enabled
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to start job');
+                }
+                
+                jobId = data.job_id;
+
+                document.getElementById('statusBox').classList.add('active');
+                document.getElementById('logOutput').style.display = 'block';
+                
+                startPolling();
+            } catch (error) {
+                alertBox.className = 'alert alert-error';
+                alertBox.textContent = '❌ Error: ' + error.message;
+                alertBox.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Start Cloning';
+            }
+        });
+
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            
+            pollInterval = setInterval(async () => {
+                if (!jobId) return;
+
+                try {
+                    const response = await fetch(`/api/v1/jobs/${jobId}`);
+                    const data = await response.json();
+
+                    updateStatus(data);
+
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        document.getElementById('submitBtn').disabled = false;
+                        document.getElementById('submitBtn').textContent = '🚀 Start Cloning';
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 2000);
+        }
+
+        function updateStatus(data) {
+            const badge = document.getElementById('statusBadge');
+            const progress = document.getElementById('progressFill');
+            const jobInfo = document.getElementById('jobInfo');
+            const downloadLink = document.getElementById('downloadLink');
+
+            badge.className = `status-badge status-${data.status}`;
+            badge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+
+            if (data.status === 'running') {
+                progress.style.width = '60%';
+                jobInfo.innerHTML = `<p>Started: ${data.started_at || 'N/A'}</p>`;
+                if (data.ai_status) {
+                    jobInfo.innerHTML += `<p>🤖 ${data.ai_status}</p>`;
+                }
+            } else if (data.status === 'completed') {
+                progress.style.width = '100%';
+                let infoHtml = `<p>✅ Completed!</p>`;
+                infoHtml += `<p>Pages: ${data.manifest?.visited_count || 0} | Assets: ${data.manifest?.assets_count || 0}</p>`;
+                if (data.ai_completed) {
+                    infoHtml += `<p>🤖 AI analysis completed!</p>`;
+                }
+                jobInfo.innerHTML = infoHtml;
+                if (data.download_url) {
+                    downloadLink.href = data.download_url;
+                    downloadLink.style.display = 'inline-block';
+                }
+            } else if (data.status === 'failed') {
+                progress.style.width = '0%';
+                jobInfo.innerHTML = `<p style="color:red;">❌ Error: ${data.error || 'Unknown error'}</p>`;
+            } else if (data.status === 'queued') {
+                progress.style.width = '20%';
+                jobInfo.innerHTML = `<p>Waiting to start...</p>`;
+            }
+        }
+
+        // Load jobs list
+        async function loadJobs() {
+            const jobsList = document.getElementById('jobsList');
+            jobsList.innerHTML = '<p>Loading...</p>';
+            
+            try {
+                const response = await fetch('/api/v1/jobs');
+                const data = await response.json();
+                
+                if (data.jobs.length === 0) {
+                    jobsList.innerHTML = '<p>No jobs yet. Start cloning!</p>';
+                    return;
+                }
+                
+                let html = '<div style="display: grid; gap: 10px;">';
+                data.jobs.forEach(job => {
+                    const aiBadge = job.ai_enabled ? '<span style="background:#f093fb;color:white;padding:2px 8px;border-radius:10px;font-size:0.8em;">🤖 AI</span>' : '';
+                    const aiComplete = job.ai_completed ? '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:10px;font-size:0.8em;">✓ Done</span>' : '';
+                    
+                    html += `
+                        <div style="background:#f8f9fa;padding:15px;border-radius:8px;border-left:4px solid ${job.status === 'completed' ? '#28a745' : job.status === 'failed' ? '#dc3545' : '#ffc107'}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <strong>${job.url}</strong>
+                                <span class="status-badge status-${job.status}">${job.status}</span>
+                            </div>
+                            <div style="margin-top:8px;font-size:0.9em;color:#666;">
+                                ${new Date(job.created_at).toLocaleString()} | ${aiBadge} ${aiComplete}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                jobsList.innerHTML = html;
+            } catch (error) {
+                jobsList.innerHTML = '<p style="color:red;">Failed to load jobs: ' + error.message + '</p>';
+            }
+        }
+
+        // Initialize
+        loadAIConfig();
+    </script>
+</body>
+</html>

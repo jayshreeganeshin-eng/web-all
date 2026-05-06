@@ -1,0 +1,334 @@
+Metadata-Version: 2.4
+Name: web-all
+Version: 1.0.0
+Summary: Universal Website Cloner & Crawler - Download visible and invisible content
+Author-email: web-all Team <team@web-all.dev>
+License: MIT
+Project-URL: Homepage, https://github.com/web-all/web-all
+Project-URL: Documentation, https://github.com/web-all/web-all#readme
+Project-URL: Repository, https://github.com/web-all/web-all.git
+Keywords: website,cloner,crawler,scraper,downloader,archive,mirror
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: aiohttp>=3.9.0
+Requires-Dist: beautifulsoup4>=4.12.0
+Requires-Dist: lxml>=5.0.0
+Requires-Dist: playwright>=1.40.0
+Requires-Dist: fastapi>=0.109.0
+Requires-Dist: uvicorn>=0.27.0
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: tqdm>=4.66.0
+Requires-Dist: cssutils>=2.9.0
+Requires-Dist: python-multipart>=0.0.6
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: black>=24.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+
+# 🕷️ web-all
+
+**Universal Website Cloner & Crawler** - Download visible and invisible content from any website.
+
+## ✨ Features
+
+- **Full Website Cloning** - Mirror entire websites with all assets (HTML, CSS, JS, images)
+- **Infinite Scroll Handling** - Automatically scroll pages to load lazy content
+- **Hidden Content Discovery** - Click toggles, hover menus, expand accordions to reveal hidden elements
+- **Sitemap Parsing** - Discover URLs from sitemap.xml and robots.txt
+- **Path Guessing** - Find orphan pages by testing common paths
+- **Multiple Modes**:
+  - `clone` - Full site mirror with rewritten links
+  - `scroll` - Single page with infinite scroll capture
+  - `images-only` - Download all images
+  - `text-only` - Extract clean text
+  - `deep-crawl` - Comprehensive discovery with sitemaps
+- **REST API** - Submit jobs programmatically
+- **Web GUI** - Beautiful browser-based interface
+- **Respectful Crawling** - Rate limiting, user-agent rotation, robots.txt support
+
+---
+
+## 🚀 Installation
+
+### Option 1: Single Command (Recommended for Noobs)
+
+```bash
+pip install web-all && python -m playwright install chromium
+```
+
+### Option 2: From Source
+
+```bash
+git clone https://github.com/web-all/web-all.git
+cd web-all
+pip install -e .
+python -m playwright install chromium
+```
+
+### Option 3: Docker (Coming Soon)
+
+```bash
+docker run -d -p 8000:8000 -v $(pwd)/data:/app/output weball/web-all:latest
+```
+
+---
+
+## 💻 How to Run Locally
+
+### CLI Mode
+
+After installation, use the `web-all` or `wa` command:
+
+#### 1. Full Website Clone
+
+```bash
+web-all clone https://example.com --output ./mycopy --depth 5
+```
+
+#### 2. Clone with Hidden Content Discovery
+
+```bash
+web-all clone https://example.com --discover-invisible --output ./full-mirror
+```
+
+#### 3. Scroll & Capture (Infinite Scroll Pages)
+
+```bash
+web-all scroll https://infinite-scroll-site.com --output ./captured
+```
+
+#### 4. Download Images Only
+
+```bash
+web-all images-only https://photo-gallery.com --output ./images
+```
+
+#### 5. Extract Text Only
+
+```bash
+web-all text-only https://blog.example.com --output ./text --depth 3
+```
+
+#### 6. Deep Crawl (Sitemap + Path Guessing)
+
+```bash
+web-all deep-crawl https://example.com --sitemap --path-guess --output ./deep
+```
+
+#### 7. Start Web GUI Server
+
+```bash
+web-all serve --port 8000
+```
+
+Then open `http://localhost:8000` in your browser.
+
+### GUI Mode
+
+1. Run the server:
+   ```bash
+   web-all serve
+   ```
+
+2. Open your browser to `http://localhost:8000`
+
+3. Enter the URL, select mode, and click "Start Download"
+
+4. Watch real-time progress and download when complete
+
+---
+
+## 🌐 How to Host Online (InfinityFree.com)
+
+**Important:** InfinityFree is a **static hosting** service. You cannot run the `web-all` Python tool there. However, you can:
+
+### Workflow: Clone Locally → Upload to InfinityFree
+
+#### Step 1: Clone the Website Locally
+
+```bash
+web-all clone https://your-target-site.com --output ./for-upload --depth 5
+```
+
+#### Step 2: (Optional) Create ZIP Archive
+
+```bash
+cd for-upload
+zip -r ../for-upload.zip .
+cd ..
+```
+
+#### Step 3: Upload to InfinityFree
+
+1. **Log in** to your InfinityFree account at [infinityfree.net](https://infinityfree.net)
+
+2. **Go to File Manager** or use FTP client (FileZilla recommended)
+   - FTP Host: `ftpupload.net` (or your assigned host)
+   - FTP Username: Your InfinityFree username (e.g., `epiz_XXXXXX`)
+   - FTP Password: Your InfinityFree password
+
+3. **Navigate** to `/htdocs/` directory
+
+4. **Upload** all files from your `./for-upload` folder
+
+5. **Access** your cloned site at `http://your-domain.infinityfreeapp.com`
+
+### Automated FTP Upload (Coming Soon)
+
+```bash
+web-all clone https://target.com \
+  --ftp-host ftpupload.net \
+  --ftp-user epiz_XXXXXX \
+  --ftp-password YOUR_PASSWORD \
+  --output ./auto-upload
+```
+
+---
+
+## 📋 CLI Reference
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `clone` | Full website clone with assets |
+| `scroll` | Single page with infinite scroll |
+| `images-only` | Download all images |
+| `text-only` | Extract text from pages |
+| `deep-crawl` | Comprehensive crawl with discovery |
+| `serve` | Start web GUI server |
+
+### Common Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--output` | `-o` | Output directory | `./output` |
+| `--depth` | `-d` | Crawl depth | `5` |
+| `--concurrency` | `-c` | Concurrent requests | `5` |
+| `--delay` | | Delay between requests (seconds) | `1.0` |
+| `--discover-invisible` | | Enable hidden content discovery | `false` |
+| `--headless` | | Run browser headless | `true` |
+
+---
+
+## 🔧 API Reference
+
+### Start a Job
+
+```bash
+curl -X POST http://localhost:8000/api/v1/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "mode": "clone", "depth": 5}'
+```
+
+Response:
+```json
+{"job_id": "abc-123-def", "status": "pending"}
+```
+
+### Check Job Status
+
+```bash
+curl http://localhost:8000/api/v1/jobs/abc-123-def
+```
+
+Response:
+```json
+{
+  "job_id": "abc-123-def",
+  "status": "running",
+  "progress": 45,
+  "message": "Downloading pages..."
+}
+```
+
+---
+
+## ⚙️ Configuration
+
+### Respectful Crawling
+
+By default, `web-all`:
+- Waits 1 second between requests
+- Uses random modern user-agents
+- Respects `robots.txt` rules
+- Limits concurrent connections
+
+### Advanced Options
+
+- **Custom User-Agent**: `--user-agent "MyBot/1.0"`
+- **Include Patterns**: `--include ".*blog.*"`
+- **Exclude Patterns**: `--exclude ".*admin.*"`
+- **Authentication**: `--cookies cookies.txt`
+
+---
+
+## 📁 Output Structure
+
+```
+output/
+├── example.com/
+│   ├── index.html
+│   ├── about/
+│   │   └── index.html
+│   ├── blog/
+│   │   ├── post-1.html
+│   │   └── post-2.html
+│   ├── assets/
+│   │   ├── css/
+│   │   ├── js/
+│   │   └── images/
+│   └── manifest.json
+└── archive.zip (optional)
+```
+
+All links are rewritten to relative paths for offline browsing.
+
+---
+
+## 🛠️ Development
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Format code
+black web_all/
+
+# Lint
+ruff check web_all/
+```
+
+---
+
+## 📝 License
+
+MIT License - See LICENSE file for details.
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! Please read CONTRIBUTING.md first.
+
+---
+
+## 🆘 Support
+
+- **Documentation**: This README
+- **Issues**: GitHub Issues
+- **Discussions**: GitHub Discussions
+
+---
+
+**Made with ❤️ by the web-all Team**
