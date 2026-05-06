@@ -1,8 +1,8 @@
-# 🌐 web-all v2.0.0
+# 🌐 web-all v3.0.0
 
-**Universal Website Cloner & Crawler with Tor Support**
+**AI-Powered Universal Website Cloner & Crawler with Tor Support**
 
-Clone any website including .onion sites, discover hidden content, download images/text, and host on InfinityFree!
+Clone any website including .onion sites, discover hidden content, download images/text, analyze with AI, and host on InfinityFree!
 
 ## ✨ Features
 
@@ -12,6 +12,7 @@ Clone any website including .onion sites, discover hidden content, download imag
 - 📸 **Image Downloader** - Extract all images including lazy-loaded
 - 📝 **Text Extractor** - Clean text extraction from any page
 - ⚡ **Dynamic JS Support** - Handle JavaScript-heavy sites with headless browser
+- 🤖 **AI Integration** - Auto-summarization, tagging, and data extraction (Ollama, Groq, OpenRouter, HuggingFace)
 - 🌍 **Web GUI** - Beautiful browser-based interface
 - 🔌 **REST API** - Programmatic access with job queue
 - 📦 **One-Command Install** - Easy setup for beginners
@@ -22,13 +23,14 @@ Clone any website including .onion sites, discover hidden content, download imag
 
 ```bash
 cd web_all_project
+chmod +x install.sh
 ./install.sh
 ```
 
 Or manually:
 
 ```bash
-pip install requests beautifulsoup4 lxml playwright fastapi uvicorn
+pip install requests beautifulsoup4 lxml playwright fastapi uvicorn python-multipart aiohttp
 python -m playwright install chromium
 pip install -e .
 ```
@@ -107,82 +109,3 @@ InfinityFree hosts static sites only. Here's how to upload your cloned site:
 lftp -u username,password ftpupload.net << EOF
 mirror ./upload /htdocs
 bye
-EOF
-```
-
-## 📁 Project Structure
-
-```
-web_all_project/
-├── cli.py                 # Command-line interface
-├── web_all/
-│   ├── __init__.py        # Package init
-│   ├── core/
-│   │   ├── cloner.py      # Main cloning engine
-│   │   └── invisible.py   # Hidden content discovery
-│   ├── api/
-│   │   └── server.py      # FastAPI REST server
-│   └── gui/
-│       └── index.html     # Web interface
-├── tests/                 # Test suite
-├── output/                # Downloaded content
-├── install.sh             # One-command installer
-├── pyproject.toml         # Package configuration
-└── README.md              # This file
-```
-
-## ⚙️ Configuration Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-o, --output` | Output directory | `./output` |
-| `-d, --depth` | Crawl depth (0-10) | 2 |
-| `-c, --concurrency` | Concurrent requests | 3 |
-| `--delay` | Delay between requests (seconds) | 1.0 |
-| `--tor` | Use Tor proxy | false |
-| `--tor-proxy` | Tor proxy address | `http://127.0.0.1:9050` |
-| `--dynamic` | Use headless browser | false |
-| `--scrolls` | Scroll iterations for discovery | 5 |
-
-## 🔒 Legal & Ethical Use
-
-- Respect `robots.txt` files
-- Don't overload servers (use delays)
-- Only clone sites you have permission to
-- Follow terms of service
-- Comply with copyright laws
-
-## 🛠️ Troubleshooting
-
-### Playwright Browser Issues
-```bash
-python -m playwright install chromium --force
-```
-
-### Tor Connection Failed
-```bash
-# Check if Tor is running
-systemctl status tor
-# Or start it
-sudo systemctl start tor
-```
-
-### Permission Errors
-```bash
-chmod +x install.sh
-sudo chown -R $USER:$USER ./output
-```
-
-## 📝 License
-
-MIT License - See LICENSE file for details.
-
-## 🤝 Contributing
-
-Contributions welcome! Please read CONTRIBUTING.md first.
-
-## 📞 Support
-
-- Documentation: https://github.com/web-all/web-all/wiki
-- Issues: https://github.com/web-all/web-all/issues
-- Discussions: https://github.com/web-all/web-all/discussions
