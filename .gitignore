@@ -1,46 +1,38 @@
 ```
-# Compressed archives
-*.zip
-
-# Build/dist directories
-dist/
-build/
-
-# Logs and temp files
-*.log
-*.tmp
-
-# Environment files
-.env
-.env.local
-*.env.*
-
-# Python specific
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-*.so
-*.egg-info/
+env/
+venv/
+.venv/
 .eggs/
+.egg-info/
 
-# Coverage reports
+# Distribution / packaging
+*.egg
+*.egg-info/
+dist/
+build/
+develop-eggs/
+.installed.cfg
+.tox/
+.nox/
 .coverage
-coverage/
-htmlcov/
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Testing
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
 .pytest_cache/
-.mypy_cache/
+.hypothesis/
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*
 ```
