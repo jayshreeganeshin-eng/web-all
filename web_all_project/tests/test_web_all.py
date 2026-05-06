@@ -18,7 +18,7 @@ class TestSiteCloner:
         cloner = SiteCloner(output_dir="./test_output", depth=2)
         assert "test_output" in str(cloner.output_dir)
         assert cloner.depth == 2
-        assert cloner.concurrency == 3
+        assert cloner.concurrency == 5
     
     def test_normalize_url(self):
         """Test URL normalization"""

@@ -1,4 +1,4 @@
-# 🌐 web-all v2.0.0
+# 🌐 web-all v3.0.0
 
 **Universal Website Cloner & Crawler with Tor Support**
 

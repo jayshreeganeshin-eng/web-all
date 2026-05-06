@@ -117,7 +117,7 @@ async def run_clone_job(job_id: str, request: CloneRequest):
 @app.get("/")
 async def root():
     """API health check."""
-    return {"message": "web-all API is running", "version": "2.0.0"}
+    return {"message": "web-all API is running", "version": "3.0.0"}
 
 
 @app.post("/api/v1/clone")

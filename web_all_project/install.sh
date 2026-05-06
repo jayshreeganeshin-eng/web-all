@@ -4,7 +4,7 @@
 
 set -e
 
-echo "🚀 Installing web-all v2.0.0..."
+echo "🚀 Installing web-all v3.0.0..."
 
 # Check Python version
 if ! command -v python3 &> /dev/null; then
