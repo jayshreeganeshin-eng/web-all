@@ -1,6 +1,6 @@
 # 🕷️ web-all - Universal Website Cloner & Crawler
 
-**The most advanced open-source tool for downloading entire websites including hidden content, videos, images, and text.**
+**The most advanced open-source tool for downloading entire websites including hidden content, videos, images, and ALL types of files from the internet.**
 
 ## ✨ Features
 
@@ -21,6 +21,10 @@
 - **🆕 Performance Monitoring** - Track success rates, response times, and throughput
 - **🆕 Configuration Management** - Save and load user preferences
 - **🆕 Enhanced Logging** - Detailed logs for debugging and auditing
+- **🆕 Universal File Downloader** - Download ALL file types (PDFs, docs, archives, media, code, data, executables, fonts)
+- **🆕 Internet Archive Integration** - Search and download from archive.org
+- **🆕 File Categorization** - Automatic organization by file type
+- **🆕 Download Manifests** - Complete logs with MD5 hashes and metadata
 
 ### Interfaces
 - **CLI** - Full-featured command-line interface
@@ -121,6 +125,30 @@ web-all archive ./mycopy --report
 ```bash
 web-all serve --port 8000
 # Open http://localhost:8000 in your browser
+```
+
+#### 13. Download All File Types from Website 🆕
+```bash
+# Download everything (PDFs, images, videos, docs, code, etc.)
+web-all download-all https://example.com -o ./downloads
+
+# Download only specific file types
+web-all download-all https://example.com --types pdf zip jpg
+
+# Set max file size (in MB) and depth
+web-all download-all https://example.com --max-size 500 --depth 5
+
+# Don't organize by type (flat structure)
+web-all download-all https://example.com --no-organize
+```
+
+#### 14. Download from Internet Archive 🆕
+```bash
+# Search and download items
+web-all archive-download --query "python tutorial" --limit 20
+
+# Download only PDFs about machine learning
+web-all archive-download --query "machine learning" --types pdf --limit 50
 ```
 
 ### GUI Mode (Web Interface)

@@ -1,16 +1,1 @@
-```
-# Compiled Python files
-*.pyc
-__pycache__/
-
-# Distribution artifacts
-*.egg-info/
-
-# Logs
-*.log
-
-# Environment files
-.env
-.env.local
-*.env.*
-```
+Nothing should be ignored in this case, as the changes only include source code files (.py) and documentation files (.md), which are not build artifacts, dependencies, or temporary files.
