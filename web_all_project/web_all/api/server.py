@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from ..core.cloner import SiteCloner
 from ..core.invisible import InvisibleContentEngine
 from ..utils.ai_engine import AIEngine, get_available_providers, validate_api_key
+from ..utils.zip_utils import create_zip_archive
 
 app = FastAPI(title="web-all API", version="3.0.0")
 
@@ -174,7 +175,9 @@ async def get_job_status(job_id: str):
 
 @app.get("/api/v1/download/{job_id}")
 async def download_job_output(job_id: str):
-    """Download the cloned site as a ZIP (future) or access directory."""
+    """Download the cloned site as a ZIP file or access individual files."""
+    import tempfile
+    
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     
@@ -188,17 +191,57 @@ async def download_job_output(job_id: str):
     if not output_path.exists():
         raise HTTPException(status_code=404, detail="Output not found")
     
-    # Return index.html if exists
-    index_file = output_path / "index.html"
-    if index_file.exists():
-        return FileResponse(str(index_file), media_type="text/html")
+    # Create ZIP archive for download
+    try:
+        temp_dir = tempfile.mkdtemp()
+        zip_path = Path(temp_dir) / f"{output_path.name}.zip"
+        create_zip_archive(str(output_path), str(zip_path))
+        
+        return FileResponse(
+            str(zip_path),
+            media_type="application/zip",
+            filename=f"{output_path.name}.zip"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create ZIP: {str(e)}")
+
+
+@app.get("/api/v1/download/{job_id}/view/{filename:path}")
+async def view_file(job_id: str, filename: str):
+    """View a specific file from the cloned site."""
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
     
-    # Otherwise return manifest
-    manifest_file = output_path / "manifest.json"
-    if manifest_file.exists():
-        return FileResponse(str(manifest_file), media_type="application/json")
+    job = jobs[job_id]
     
-    raise HTTPException(status_code=404, detail="No downloadable content found")
+    if job["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Job not completed")
+    
+    output_path = Path(job.get("output_path", ""))
+    file_path = output_path / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Determine media type based on extension
+    media_types = {
+        '.html': 'text/html',
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+        '.json': 'application/json',
+        '.txt': 'text/plain',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.pdf': 'application/pdf',
+    }
+    
+    ext = file_path.suffix.lower()
+    media_type = media_types.get(ext, 'application/octet-stream')
+    
+    return FileResponse(str(file_path), media_type=media_type)
 
 
 @app.get("/api/v1/jobs")
