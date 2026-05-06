@@ -69,6 +69,12 @@ def main():
     archive_parser = subparsers.add_parser('archive', help='Create ZIP archive of output')
     archive_parser.add_argument('input_dir', help='Directory to archive')
     archive_parser.add_argument('--output', '-o', help='Output ZIP file path')
+    archive_parser.add_argument('--report', action='store_true', help='Generate analytics report')
+    
+    # Report command
+    report_parser = subparsers.add_parser('report', help='Generate analytics report for cloned site')
+    report_parser.add_argument('input_dir', help='Directory with cloned site')
+    report_parser.add_argument('--output', '-o', help='Output report file (JSON)')
     
     # Upload command
     upload_parser = subparsers.add_parser('upload', help='Upload to FTP server')
@@ -208,6 +214,26 @@ def main():
         output_zip = args.output or f"{args.input_dir}.zip"
         zip_path = ArchiveManager.create_zip(args.input_dir, output_zip)
         print(f"Archive created: {zip_path}")
+        
+        # Generate report if requested
+        if args.report:
+            print("\nGenerating analytics report...")
+            from .analytics import AnalyticsEngine
+            analytics = AnalyticsEngine(args.input_dir)
+            report = analytics.analyze_site(args.input_dir)
+            report_file = analytics.save_report(report, args.output.replace('.zip', '_report.json') if args.output else None)
+            analytics.print_summary(report)
+            print(f"Report saved to: {report_file}")
+        
+    elif args.command == 'report':
+        print(f"Generating report for {args.input_dir}...")
+        from .analytics import AnalyticsEngine
+        
+        analytics = AnalyticsEngine(args.input_dir)
+        report = analytics.analyze_site(args.input_dir)
+        report_file = analytics.save_report(report, args.output)
+        analytics.print_summary(report)
+        print(f"Report saved to: {report_file}")
         
     elif args.command == 'upload':
         print(f"Uploading {args.local_dir} to {args.host}...")

@@ -6,11 +6,12 @@ Provides REST API and serves the web GUI.
 import asyncio
 import json
 import uuid
+import zipfile
 from pathlib import Path
 from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 
@@ -68,6 +69,45 @@ async def get_job_status(job_id: str):
     return JobStatus(**job_data)
 
 
+@app.get("/api/v1/jobs/{job_id}/report")
+async def get_job_report(job_id: str):
+    """Get job analytics report."""
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    job_data = jobs[job_id]
+    if job_data["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Job not completed")
+    
+    # Look for report file
+    output_path = Path(job_data.get("output_path", "./output"))
+    report_file = output_path / "site_report.json"
+    
+    if report_file.exists():
+        return FileResponse(
+            path=report_file,
+            filename="site_report.json",
+            media_type="application/json"
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+
+@app.get("/")
+async def serve_gui():
+    """Serve the web GUI."""
+    gui_path = Path(__file__).parent / "gui" / "index.html"
+    if gui_path.exists():
+        return HTMLResponse(content=gui_path.read_text(encoding='utf-8'))
+    raise HTTPException(status_code=404, detail="GUI not found")
+
+
+# Mount static files (CSS, JS, etc.)
+static_path = Path(__file__).parent / "gui"
+if static_path.exists():
+    app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+
 @app.get("/api/v1/download/{job_id}")
 async def download_result(job_id: str):
     """Download job result as ZIP."""
@@ -78,8 +118,22 @@ async def download_result(job_id: str):
     if job_data["status"] != "completed" or not job_data["output_path"]:
         raise HTTPException(status_code=400, detail="Job not completed")
     
-    # TODO: Create ZIP and return
-    return {"message": "Download coming soon"}
+    # Create ZIP archive
+    output_path = Path(job_data["output_path"])
+    zip_path = output_path.parent / f"{output_path.name}.zip"
+    
+    from .advanced import ArchiveManager
+    try:
+        ArchiveManager.create_zip(str(output_path), str(zip_path))
+        
+        # Return ZIP file
+        return FileResponse(
+            path=zip_path,
+            filename=f"{output_path.name}.zip",
+            media_type="application/zip"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create ZIP: {str(e)}")
 
 
 async def run_job(job_id: str, job: CloneJob):
@@ -96,6 +150,7 @@ async def run_job(job_id: str, job: CloneJob):
             depth=job.depth,
             concurrency=job.concurrency,
             delay=job.delay,
+            generate_report=True,
         )
         
         await cloner.clone_site()
@@ -108,6 +163,8 @@ async def run_job(job_id: str, job: CloneJob):
     except Exception as e:
         jobs[job_id]["status"] = "failed"
         jobs[job_id]["message"] = str(e)
+        import traceback
+        jobs[job_id]["error_trace"] = traceback.format_exc()
 
 
 def start_server(host: str = "0.0.0.0", port: int = 8000):

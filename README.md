@@ -17,6 +17,10 @@
 - **Interactive Login** - Manual login support with cookie saving
 - **ZIP Archiving** - Package cloned sites into ZIP files
 - **FTP Upload** - Direct upload to hosting providers (InfinityFree, etc.)
+- **🆕 Analytics Reports** - Generate detailed statistics and performance metrics
+- **🆕 Performance Monitoring** - Track success rates, response times, and throughput
+- **🆕 Configuration Management** - Save and load user preferences
+- **🆕 Enhanced Logging** - Detailed logs for debugging and auditing
 
 ### Interfaces
 - **CLI** - Full-featured command-line interface
@@ -101,7 +105,19 @@ web-all archive ./mycopy -o backup.zip
 web-all upload ./mycopy --host ftpupload.net --user epiz_XXXXXX --password YOUR_PASS
 ```
 
-#### 10. Start Web GUI Server
+#### 10. Generate Analytics Report
+```bash
+web-all report ./mycopy -o report.json
+# Shows detailed statistics and saves JSON report
+```
+
+#### 11. Create Archive with Report
+```bash
+web-all archive ./mycopy --report
+# Creates ZIP + analytics report
+```
+
+#### 12. Start Web GUI Server
 ```bash
 web-all serve --port 8000
 # Open http://localhost:8000 in your browser
@@ -135,14 +151,15 @@ web-all upload ./for-upload --host ftpupload.net --user epiz_XXXXXX --password Y
 
 | Command | Description |
 |---------|-------------|
-| `clone` | Full website mirror |
+| `clone` | Full website mirror with analytics |
 | `scroll` | Single page infinite scroll |
 | `images-only` | Download all images |
 | `text-only` | Extract clean text |
 | `videos-only` | Download videos |
 | `mobile-capture` | Capture as mobile device |
 | `login` | Interactive login |
-| `archive` | Create ZIP archive |
+| `archive` | Create ZIP archive (+ optional report) |
+| `report` | 🆕 Generate analytics report |
 | `upload` | Upload to FTP |
 | `deep-crawl` | Crawl with sitemap |
 | `serve` | Start web GUI |
