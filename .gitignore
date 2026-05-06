@@ -1,36 +1,26 @@
 ```
-# Compressed archives
-*.zip
-
-# Build/dist directories
-dist/
-build/
-
-# Logs and temp files
-*.log
-*.tmp
-
-# Environment files
-.env
-.env.local
-*.env.*
-
-# Python specific
+# Dependencies
+.venv/
+venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-*.so
+
+# Build artifacts
+dist/
+build/
 *.egg-info/
-.eggs/
 
-# Coverage reports
-.coverage
-coverage/
-htmlcov/
+# Logs
+*.log
 
-# IDE files
+# Environment variables
+.env
+.env.local
+*.env.*
+
+# Editors
 .vscode/
 .idea/
 *.swp
@@ -40,7 +30,17 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Testing
-.pytest_cache/
-.mypy_cache/
+# Coverage reports
+.coverage
+coverage/
+htmlcov/
+
+# Pre-commit
+.pre-commit-config.yaml.swp
+
+# Python specific
+*.py[cod]
+*$py.class
+*.so
+.Python
 ```
