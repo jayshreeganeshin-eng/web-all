@@ -43,19 +43,19 @@ DEVICE_PROFILES = {
 
 class TorManager:
     """Manages Tor connection and proxy configuration."""
-    
+
     TOR_SOCKS_PORT_MAC = 9150  # Tor Browser default on Mac
     TOR_SOCKS_PORT_LINUX = 9050  # Tor Daemon default on Linux
     TOR_SOCKS_PORT_WIN = 9150  # Tor Browser default on Windows
-    
+
     def __init__(self):
         self.proxy_server = None
         self.is_onion_mode = False
-        
+
     def detect_tor(self) -> Optional[int]:
         """Detects running Tor instance and returns port."""
         ports_to_check = [self.TOR_SOCKS_PORT_MAC, self.TOR_SOCKS_PORT_LINUX, self.TOR_SOCKS_PORT_WIN]
-        
+
         for port in ports_to_check:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,10 +73,10 @@ class TorManager:
         """Returns proxy config if URL is .onion"""
         if not url.endswith('.onion'):
             return {}
-            
+
         self.is_onion_mode = True
         port = self.detect_tor()
-        
+
         if not port:
             raise ConnectionError(
                 "❌ Tor is not running! To crawl .onion sites:\n"
@@ -85,10 +85,10 @@ class TorManager:
                 "3. OR install tor daemon: 'sudo apt install tor' (Linux) or 'brew install tor' (Mac)\n"
                 "4. Run this command again."
             )
-            
+
         self.proxy_server = f"socks5://127.0.0.1:{port}"
         print(f"🧅 Routing traffic through Tor (Port {port})")
-        
+
         return {
             "proxy": {
                 "server": self.proxy_server,
@@ -99,10 +99,10 @@ class TorManager:
 
 class DeviceOptimizer:
     """Handles multi-device rendering and optimization."""
-    
+
     def __init__(self, device_name: str = "desktop"):
         self.profile = DEVICE_PROFILES.get(device_name.lower(), DEVICE_PROFILES["desktop"])
-        
+
     async def apply_to_context(self, context: BrowserContext):
         """Applies device settings to the browser context."""
         # Playwright context options
@@ -111,7 +111,7 @@ class DeviceOptimizer:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5"
         })
-        
+
         # Note: Viewport is usually set on page creation, but we can resize
         # For comprehensive testing, we might want to capture multiple views
         return self.profile
@@ -122,29 +122,29 @@ class DeviceOptimizer:
         (e.g., mobile menus, lazy loads that only fire on small screens).
         """
         print(f"📱 Optimizing for {self.profile.name}...")
-        
+
         # Set initial viewport
         await page.set_viewport_size({
             "width": self.profile.viewport_width,
             "height": self.profile.viewport_height
         })
-        
+
         # Load page
         await page.goto(url, wait_until="networkidle", timeout=60000)
-        
+
         # If it's a mobile device, simulate touch interactions to open menus
         if self.profile.is_mobile:
             await self._trigger_mobile_elements(page)
-            
+
         return page
 
     async def _trigger_mobile_elements(self, page: Page):
         """Clicks common mobile menu triggers."""
         mobile_selectors = [
-            ".menu-toggle", ".hamburger", ".nav-icon", 
+            ".menu-toggle", ".hamburger", ".nav-icon",
             "[aria-label='Menu']", ".mobile-nav-btn", "#drawer-toggle"
         ]
-        
+
         for selector in mobile_selectors:
             try:
                 element = page.locator(selector)
@@ -157,19 +157,19 @@ class DeviceOptimizer:
 
 async def create_tor_browser_session(playwright, tor_manager: TorManager, device_optimizer: DeviceOptimizer, headless: bool = True):
     """Creates a browser session configured for Tor and specific device."""
-    
+
     browser_args = [
         "--disable-blink-features=AutomationControlled",
         "--no-sandbox",
         "--disable-dev-shm-usage"
     ]
-    
+
     # Launch browser
     browser = await playwright.chromium.launch(
         headless=headless,
         args=browser_args
     )
-    
+
     # Prepare context options
     context_options = {
         "viewport": {
@@ -181,11 +181,11 @@ async def create_tor_browser_session(playwright, tor_manager: TorManager, device
         "has_touch": device_optimizer.profile.has_touch,
         "user_agent": device_optimizer.profile.user_agent
     }
-    
+
     # Add Tor proxy if needed
     if tor_manager.is_onion_mode:
         context_options.update(tor_manager.configure_for_onion("")) # Config already stored in manager
-        
+
     context = await browser.new_context(**context_options)
     return browser, context
 

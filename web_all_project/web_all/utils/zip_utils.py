@@ -14,28 +14,28 @@ import shutil
 def create_zip_archive(source_dir: str, output_path: Optional[str] = None) -> str:
     """
     Create a ZIP archive from a directory.
-    
+
     Args:
         source_dir: Path to directory to zip
         output_path: Optional path for output ZIP file
-        
+
     Returns:
         Path to created ZIP file
     """
     source_path = Path(source_dir)
-    
+
     if not source_path.exists():
         raise FileNotFoundError(f"Source directory not found: {source_dir}")
-    
+
     if not source_path.is_dir():
         raise NotADirectoryError(f"Source is not a directory: {source_dir}")
-    
+
     # Generate output path if not provided
     if output_path is None:
         output_path = f"{source_dir}.zip"
-    
+
     output_path = Path(output_path)
-    
+
     # Create ZIP file
     with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(source_path):
@@ -44,32 +44,32 @@ def create_zip_archive(source_dir: str, output_path: Optional[str] = None) -> st
                 # Calculate relative path for archive
                 arcname = file_path.relative_to(source_path.parent)
                 zipf.write(file_path, arcname)
-    
+
     return str(output_path)
 
 
 def extract_zip_archive(zip_path: str, extract_to: str) -> str:
     """
     Extract a ZIP archive to a directory.
-    
+
     Args:
         zip_path: Path to ZIP file
         extract_to: Directory to extract to
-        
+
     Returns:
         Path to extraction directory
     """
     zip_file = Path(zip_path)
-    
+
     if not zip_file.exists():
         raise FileNotFoundError(f"ZIP file not found: {zip_path}")
-    
+
     extract_path = Path(extract_to)
     extract_path.mkdir(parents=True, exist_ok=True)
-    
+
     with zipfile.ZipFile(zip_file, 'r') as zipf:
         zipf.extractall(extract_path)
-    
+
     return str(extract_path)
 
 
