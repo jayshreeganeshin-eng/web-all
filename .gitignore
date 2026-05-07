@@ -1,46 +1,21 @@
 ```
-# Compressed archives
-*.zip
-
-# Build/dist directories
-dist/
-build/
+# Dependencies
+node_modules/
 
 # Logs and temp files
 *.log
 *.tmp
 
-# Environment files
+# Environment
 .env
 .env.local
 *.env.*
 
-# Python specific
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg-info/
-.eggs/
-
-# Coverage reports
-.coverage
-coverage/
-htmlcov/
-
-# IDE files
+# Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Testing
-.pytest_cache/
-.mypy_cache/
+# Build artifacts
+dist/
+build/
 ```

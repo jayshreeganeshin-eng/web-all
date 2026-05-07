@@ -1,0 +1,126 @@
+# Web Cloner Pro Configuration
+# Authorized use only - You must own or have explicit permission to clone the target website
+
+target:
+  url: ""  # Set via API or CLI
+  depth: 10  # Maximum crawl depth
+  maxPages: 1000  # Maximum pages to crawl
+  timeout: 30000  # Page load timeout in ms
+
+crawl:
+  mode: "standard"  # standard, stealth, discover_invisible
+  respectRobotsTxt: true  # Set false for authorized testing
+  concurrency: 5  # Concurrent page downloads
+  retryAttempts: 3
+  retryDelay: 1000
+  waitTime: 2000  # Base wait time for dynamic content
+  scrollPage: true  # Auto-scroll to load lazy content
+  clickElements: true  # Click navigation elements
+
+stealth:
+  enabled: false
+  rotateUserAgent: true
+  rotateProxy: false
+  proxyList: []  # List of proxy servers
+  evadeBots: true
+  humanEmulation: true
+  cookieConsentAutoAccept: true
+
+bypass:
+  enabled: false
+  solveCaptcha: false
+  captchaService: ""  # 2captcha, anticaptcha
+  captchaApiKey: ""
+  challengeWait: 5000
+
+sitemap:
+  parseSitemapXml: true
+  parseRssFeed: true
+  parseAtomFeed: true
+  discoverAlternates: true
+  bruteForcePaths: false
+  pathDictionary: []  # Custom paths to probe
+
+assets:
+  downloadImages: true
+  downloadVideos: true
+  downloadFonts: true
+  downloadPDFs: true
+  downloadJSON: true
+  inlineCSS: false
+  inlineJS: false
+  beautifyCode: true
+  ytDlpEnabled: false
+
+screenshots:
+  enabled: true
+  fullPage: true
+  viewport: ["desktop", "tablet", "mobile"]
+  formats: ["png"]
+
+auth:
+  credentials:
+    username: ""
+    password: ""
+  cookies: []  # Array of cookie objects
+  basicAuth:
+    username: ""
+    password: ""
+
+forms:
+  autoFill: false
+  fillValues: {}  # Key-value pairs for form fields
+
+viewport:
+  simulateMobile: true
+  devices:
+    - "iPhone 13"
+    - "Pixel 5"
+    - "iPad Pro"
+  customViewports: []
+
+aiAutofix:
+  enabled: false
+  llmEndpoint: ""  # OpenAI or local LLM endpoint
+  llmApiKey: ""
+  fixBrokenLinks: true
+  fixMissingAssets: true
+  injectPolyfills: false
+  fixCORS: true
+  removeTracking: true
+  generateServiceWorker: true
+  maxAttempts: 3
+
+testing:
+  runValidation: true
+  checkLinks: true
+  verifyAssets: true
+  screenshotCompare: false
+  jsErrorCheck: true
+  lighthouseScore: false
+  autoHeal: true
+  maxHealAttempts: 2
+
+output:
+  directory: "./output"
+  createZip: true
+  preserveStructure: true
+  baseUrlRewrite: true
+  addBaseTag: true
+
+logging:
+  level: "info"  # debug, info, warn, error
+  file: "./logs/web-cloner.log"
+  console: true
+
+api:
+  enabled: true
+  port: 3000
+  authKey: ""  # API authentication key
+  corsOrigins: ["*"]
+
+limits:
+  maxConcurrentDownloads: 10
+  maxDownloadSize: 104857600  # 100MB per asset
+  maxTotalSize: 1073741824  # 1GB total
+  requestDelay: 100  # Delay between requests in ms
