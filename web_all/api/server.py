@@ -52,6 +52,9 @@ class CloneRequest(BaseModel):
     ai_enabled: bool = False
     everything: bool = False
     output_name: Optional[str] = None
+    concurrency: int = 5
+    delay: float = 0.5
+    user_agent: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary using model_dump (Pydantic v2)."""
@@ -101,7 +104,10 @@ async def run_clone_job(job_id: str, request: CloneRequest):
         cloner = SiteCloner(
             output_dir=str(output_path),
             depth=request.depth,
-            use_tor=request.use_tor
+            concurrency=request.concurrency,
+            delay=request.delay,
+            use_tor=request.use_tor,
+            user_agent=request.user_agent
         )
         
         if request.discover_invisible and request.mode in ["static", "dynamic"]:

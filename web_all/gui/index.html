@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>web-all v3.0 - AI-Powered Website Cloner</title>
+    <title>web-all v4.0 - AI-Powered Website Cloner</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -13,7 +13,7 @@
             padding: 20px;
         }
         .container {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 16px;
@@ -36,6 +36,16 @@
             font-size: 0.8em;
             margin-top: 10px;
         }
+        .connection-status {
+            display: inline-block;
+            margin-left: 15px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .connection-online { background: #28a745; }
+        .connection-offline { background: #dc3545; }
         .content { padding: 30px; }
         
         /* Tabs */
@@ -45,6 +55,7 @@
             margin-bottom: 20px;
             border-bottom: 2px solid #e0e0e0;
             padding-bottom: 10px;
+            flex-wrap: wrap;
         }
         .tab-btn {
             padding: 10px 20px;
@@ -185,6 +196,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .status-badge {
             padding: 6px 12px;
@@ -219,6 +232,8 @@
             max-height: 300px;
             overflow-y: auto;
             margin-top: 15px;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
         .download-btn {
             background: #28a745;
@@ -260,21 +275,60 @@
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        
+        /* Offline mode indicator */
+        .offline-banner {
+            background: #ffc107;
+            color: #856404;
+            padding: 10px 20px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+        .offline-banner.active { display: block; }
+        
+        /* Advanced options panel */
+        .advanced-options {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        .advanced-options.active { display: block; }
+        .advanced-toggle {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-weight: 600;
+            padding: 0;
+            margin-top: 10px;
+        }
+        .advanced-toggle:hover { text-decoration: underline; }
         
         @media (max-width: 768px) {
             .header h1 { font-size: 1.8em; }
             .content { padding: 20px; }
             .tabs { flex-wrap: wrap; }
             .checkbox-group { flex-direction: column; gap: 10px; }
+            .status-header { flex-direction: column; align-items: flex-start; }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="offline-banner" id="offlineBanner">
+            ⚠️ Offline Mode - Some features may be limited
+        </div>
         <div class="header">
             <h1>🌐 web-all</h1>
             <p>AI-Powered Universal Website Cloner & Crawler</p>
-            <span class="version-badge">v3.0.0 with AI Integration</span>
+            <div>
+                <span class="version-badge">v4.0.0 with Offline Support</span>
+                <span class="connection-status connection-online" id="connectionStatus">🟢 Online</span>
+            </div>
         </div>
         
         <div class="content">
@@ -283,6 +337,7 @@
                 <button class="tab-btn active" onclick="switchTab(event, 'clone')">🚀 Clone Website</button>
                 <button class="tab-btn" onclick="switchTab(event, 'ai')">🤖 AI Settings</button>
                 <button class="tab-btn" onclick="switchTab(event, 'jobs')">📋 Job History</button>
+                <button class="tab-btn" onclick="switchTab(event, 'settings')">⚙️ Settings</button>
             </div>
             
             <!-- Clone Tab -->
@@ -310,18 +365,6 @@
                         </select>
                     </div>
                     
-                    <script>
-                        document.addEventListener('DOMContentLoaded', () => {
-                            const modeSelect = document.getElementById('mode');
-                            const aiToggle = document.getElementById('ai_enabled');
-                            modeSelect.addEventListener('change', () => {
-                                if (modeSelect.value === 'everything') {
-                                    aiToggle.checked = true;
-                                }
-                            });
-                        });
-                    </script>
-                    
                     <div class="form-group">
                         <label for="depth">Crawl Depth (0 = current page only)</label>
                         <input type="number" id="depth" name="depth" min="0" max="10" value="2">
@@ -345,6 +388,27 @@
                         </div>
                     </div>
                     
+                    <button type="button" class="advanced-toggle" onclick="toggleAdvanced()">▼ Show Advanced Options</button>
+                    
+                    <div class="advanced-options" id="advancedOptions">
+                        <div class="form-group">
+                            <label for="concurrency">Concurrency (parallel requests)</label>
+                            <input type="number" id="concurrency" name="concurrency" min="1" max="20" value="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="delay">Request Delay (seconds)</label>
+                            <input type="number" id="delay" name="delay" min="0" max="10" step="0.1" value="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="output_name">Output Folder Name (optional)</label>
+                            <input type="text" id="output_name" name="output_name" placeholder="my-clone">
+                        </div>
+                        <div class="form-group">
+                            <label for="user_agent">Custom User Agent (optional)</label>
+                            <input type="text" id="user_agent" name="user_agent" placeholder="Mozilla/5.0...">
+                        </div>
+                    </div>
+                    
                     <div id="alertBox" class="alert"></div>
                     
                     <button type="submit" class="btn" id="submitBtn">🚀 Start Cloning</button>
@@ -360,7 +424,11 @@
                     </div>
                     <div id="jobInfo"></div>
                     <div id="logOutput" class="log-output" style="display:none;"></div>
-                    <a id="downloadLink" class="download-btn" style="display:none;" href="#">⬇️ Download Result</a>
+                    <div style="margin-top: 15px;">
+                        <a id="downloadLink" class="download-btn" style="display:none;" href="#">⬇️ Download ZIP</a>
+                        <button id="viewResultBtn" class="btn btn-secondary" style="display:none; margin-left: 10px;" onclick="viewResult()">👁️ View Result</button>
+                        <button id="cancelJobBtn" class="btn btn-danger" style="display:none; margin-left: 10px;" onclick="cancelJob()">❌ Cancel</button>
+                    </div>
                 </div>
             </div>
             
@@ -368,7 +436,7 @@
             <div id="aiTab" class="tab-content">
                 <div class="ai-panel">
                     <h3>🤖 AI Configuration</h3>
-                    <p>Choose your AI provider. Works with free APIs or local Ollama.</p>
+                    <p>Choose your AI provider. Works with free APIs or local Ollama (offline-capable).</p>
                 </div>
                 
                 <form id="aiConfigForm">
@@ -383,8 +451,8 @@
                         <label>Select AI Provider</label>
                         <div class="provider-grid" id="providerGrid">
                             <div class="provider-card" data-provider="ollama" onclick="selectProvider('ollama')">
-                                <h4>🦙 Ollama (Local)</h4>
-                                <p>Completely free, runs locally. No API key needed.</p>
+                                <h4>🦙 Ollama (Local/Offline)</h4>
+                                <p>Completely free, runs locally. No API key needed. Works offline!</p>
                             </div>
                             <div class="provider-card" data-provider="groq" onclick="selectProvider('groq')">
                                 <h4>⚡ Groq Cloud</h4>
@@ -616,6 +684,12 @@
             const tor = document.getElementById('tor').checked;
             const discover_invisible = document.getElementById('discover_invisible').checked;
             const ai_enabled = document.getElementById('ai_enabled').checked;
+            
+            // Advanced options
+            const concurrency = parseInt(document.getElementById('concurrency').value) || 5;
+            const delay = parseFloat(document.getElementById('delay').value) || 0.5;
+            const output_name = document.getElementById('output_name').value || null;
+            const user_agent = document.getElementById('user_agent').value || null;
 
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
@@ -626,19 +700,29 @@
 
             try {
                 const requestBody = {
-                        url,
-                        mode,
-                        depth,
-                        use_tor: tor,
-                        discover_invisible,
-                        ai_enabled
-                    };
+                    url,
+                    mode,
+                    depth,
+                    use_tor: tor,
+                    discover_invisible,
+                    ai_enabled,
+                    concurrency,
+                    delay
+                };
 
                     if (mode === 'everything') {
-                        requestBody.everything = true;
-                    }
+                    requestBody.everything = true;
+                }
+                
+                if (output_name) {
+                    requestBody.output_name = output_name;
+                }
+                
+                if (user_agent) {
+                    requestBody.user_agent = user_agent;
+                }
 
-                    const response = await fetch('/api/v1/clone', {
+                const response = await fetch('/api/v1/clone', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(requestBody)
@@ -761,6 +845,77 @@
                 jobsList.innerHTML = '<p style="color:red;">Failed to load jobs: ' + error.message + '</p>';
             }
         }
+
+        // Toggle advanced options
+        function toggleAdvanced() {
+            const panel = document.getElementById('advancedOptions');
+            const btn = document.querySelector('.advanced-toggle');
+            panel.classList.toggle('active');
+            btn.textContent = panel.classList.contains('active') ? '▲ Hide Advanced Options' : '▼ Show Advanced Options';
+        }
+
+        // View result in new window
+        function viewResult() {
+            if (!jobId) return;
+            window.open(`/api/v1/download/${jobId}/view/index.html`, '_blank');
+        }
+
+        // Cancel job (stop polling)
+        function cancelJob() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            jobId = null;
+            document.getElementById('statusBox').classList.remove('active');
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = '🚀 Start Cloning';
+            showAlert('Job cancelled', 'warning');
+        }
+
+        // Show alert helper
+        function showAlert(message, type = 'info') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.className = `alert alert-${type}`;
+            alertBox.textContent = message;
+            alertBox.style.display = 'block';
+            setTimeout(() => {
+                alertBox.style.display = 'none';
+            }, 5000);
+        }
+
+        // Check online/offline status
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connectionStatus');
+            const offlineBanner = document.getElementById('offlineBanner');
+            
+            if (navigator.onLine) {
+                statusEl.className = 'connection-status connection-online';
+                statusEl.textContent = '🟢 Online';
+                offlineBanner.classList.remove('active');
+            } else {
+                statusEl.className = 'connection-status connection-offline';
+                statusEl.textContent = '🔴 Offline';
+                offlineBanner.classList.add('active');
+            }
+        }
+
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+
+        // Auto-mode change handler for "everything" mode
+        document.addEventListener('DOMContentLoaded', () => {
+            const modeSelect = document.getElementById('mode');
+            const aiToggle = document.getElementById('ai_enabled');
+            modeSelect.addEventListener('change', () => {
+                if (modeSelect.value === 'everything') {
+                    aiToggle.checked = true;
+                }
+            });
+            
+            // Initial connection check
+            updateConnectionStatus();
+        });
 
         // Initialize
         loadAIConfig();
