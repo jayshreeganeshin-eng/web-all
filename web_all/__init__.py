@@ -1,18 +1,19 @@
 """
 web-all: Universal Website Cloner & Crawler
-============================================
-A comprehensive tool for cloning, crawling, and downloading websites including hidden content.
-
-Features:
-- Full website cloning with asset mirroring
-- Infinite scroll handling
-- Hidden content discovery (clicks, hovers, forms)
-- Sitemap and robots.txt parsing
-- Images, text, and video extraction
-- REST API and Web GUI
-- Single-command installation
+Supports clearnet, .onion (Tor), dynamic content, and full site mirroring.
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __author__ = "web-all Team"
-__all__ = ["cloner", "crawler", "scraper", "api", "gui"]
+
+from .core.cloner import SiteCloner
+from .core.invisible import InvisibleContentEngine
+from .api.server import start_api
+from .cli import main as cli_main
+
+__all__ = [
+    "SiteCloner",
+    "InvisibleContentEngine", 
+    "start_api",
+    "cli_main"
+]

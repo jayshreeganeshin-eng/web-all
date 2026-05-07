@@ -1,240 +1,183 @@
-"""
-CLI entry point for web-all.
-Provides command-line interface for all download modes.
-"""
+#!/usr/bin/env python3
+"""CLI entry point for web-all."""
 
 import argparse
 import asyncio
 import sys
 from pathlib import Path
-from .cloner import WebsiteCloner
-from .invisible import InvisibleContentHandler
 
 
 def main():
+    """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        prog='web-all',
-        description='Universal Website Cloner & Crawler - Download visible and invisible content'
+        prog="web-all",
+        description="Universal Website Cloner - Download visible and invisible content"
     )
-    
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
+
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
     # Clone command
-    clone_parser = subparsers.add_parser('clone', help='Full website clone with assets')
-    clone_parser.add_argument('url', help='Target website URL')
-    clone_parser.add_argument('--output', '-o', default='./output', help='Output directory')
-    clone_parser.add_argument('--depth', '-d', type=int, default=5, help='Crawl depth')
-    clone_parser.add_argument('--concurrency', '-c', type=int, default=5, help='Concurrent requests')
-    clone_parser.add_argument('--delay', type=float, default=1.0, help='Delay between requests')
-    clone_parser.add_argument('--discover-invisible', action='store_true', help='Discover hidden content')
-    clone_parser.add_argument('--headless', action='store_true', default=True, help='Run browser headless')
-    
-    # Scroll command
-    scroll_parser = subparsers.add_parser('scroll', help='Single page with infinite scroll')
-    scroll_parser.add_argument('url', help='Target website URL')
-    scroll_parser.add_argument('--output', '-o', default='./output', help='Output directory')
-    scroll_parser.add_argument('--iterations', type=int, default=5, help='Scroll iterations')
-    scroll_parser.add_argument('--headless', action='store_true', default=True, help='Run browser headless')
-    
+    clone_p = subparsers.add_parser("clone", help="Full website clone with assets")
+    clone_p.add_argument("url", help="Target website URL")
+    clone_p.add_argument("-o", "--output", default="./output", help="Output directory")
+    clone_p.add_argument("-d", "--depth", type=int, default=2, help="Crawl depth")
+    clone_p.add_argument("-c", "--concurrency", type=int, default=5, help="Concurrent requests")
+    clone_p.add_argument("--delay", type=float, default=0.5, help="Delay between requests")
+    clone_p.add_argument("--tor", action="store_true", help="Use Tor proxy")
+    clone_p.add_argument("--dynamic", action="store_true", help="Use dynamic rendering")
+    clone_p.add_argument("--discover-invisible", action="store_true", help="Discover hidden content")
+
     # Images command
-    images_parser = subparsers.add_parser('images-only', help='Download all images')
-    images_parser.add_argument('url', help='Target website URL')
-    images_parser.add_argument('--output', '-o', default='./output/images', help='Output directory')
-    images_parser.add_argument('--discover-invisible', action='store_true', help='Discover hidden content')
-    images_parser.add_argument('--depth', '-d', type=int, default=3, help='Crawl depth')
-    
+    img_p = subparsers.add_parser("images", help="Download all images")
+    img_p.add_argument("url", help="Target website URL")
+    img_p.add_argument("-o", "--output", default="./output/images", help="Output directory")
+    img_p.add_argument("-d", "--depth", type=int, default=1, help="Crawl depth")
+
     # Text command
-    text_parser = subparsers.add_parser('text-only', help='Extract text from pages')
-    text_parser.add_argument('url', help='Target website URL')
-    text_parser.add_argument('--output', '-o', default='./output/text', help='Output directory')
-    text_parser.add_argument('--depth', '-d', type=int, default=3, help='Crawl depth')
-    
-    # Video command
-    video_parser = subparsers.add_parser('videos-only', help='Download all videos')
-    video_parser.add_argument('url', help='Target website URL')
-    video_parser.add_argument('--output', '-o', default='./output/videos', help='Output directory')
-    
-    # Mobile command
-    mobile_parser = subparsers.add_parser('mobile-capture', help='Capture page as mobile device')
-    mobile_parser.add_argument('url', help='Target website URL')
-    mobile_parser.add_argument('--output', '-o', default='./output/mobile.html', help='Output file')
-    mobile_parser.add_argument('--device', choices=['iphone12', 'pixel5', 'ipad'], default='iphone12', help='Device to emulate')
-    
-    # Auth command
-    auth_parser = subparsers.add_parser('login', help='Interactive login and save cookies')
-    auth_parser.add_argument('url', help='Login page URL')
-    auth_parser.add_argument('--cookies', '-c', default='cookies.json', help='Cookie output file')
-    
-    # Archive command
-    archive_parser = subparsers.add_parser('archive', help='Create ZIP archive of output')
-    archive_parser.add_argument('input_dir', help='Directory to archive')
-    archive_parser.add_argument('--output', '-o', help='Output ZIP file path')
-    
-    # Upload command
-    upload_parser = subparsers.add_parser('upload', help='Upload to FTP server')
-    upload_parser.add_argument('local_dir', help='Local directory to upload')
-    upload_parser.add_argument('--host', required=True, help='FTP host')
-    upload_parser.add_argument('--user', required=True, help='FTP username')
-    upload_parser.add_argument('--password', required=True, help='FTP password')
-    upload_parser.add_argument('--remote', default='/', help='Remote directory')
-    
-    # Deep crawl command
-    deep_parser = subparsers.add_parser('deep-crawl', help='Deep crawl with sitemap and path guessing')
-    deep_parser.add_argument('url', help='Target website URL')
-    deep_parser.add_argument('--output', '-o', default='./output', help='Output directory')
-    deep_parser.add_argument('--sitemap', action='store_true', help='Use sitemap.xml')
-    deep_parser.add_argument('--path-guess', action='store_true', help='Guess common paths')
-    
-    # Serve command (GUI)
-    serve_parser = subparsers.add_parser('serve', help='Start web GUI server')
-    serve_parser.add_argument('--port', '-p', type=int, default=8000, help='Server port')
-    serve_parser.add_argument('--host', default='0.0.0.0', help='Server host')
-    
+    txt_p = subparsers.add_parser("text", help="Extract text from pages")
+    txt_p.add_argument("url", help="Target website URL")
+    txt_p.add_argument("-o", "--output", default="./output/text", help="Output directory")
+    txt_p.add_argument("-d", "--depth", type=int, default=2, help="Crawl depth")
+
+    # Serve command (GUI + API)
+    serve_p = subparsers.add_parser("serve", help="Start web GUI server")
+    serve_p.add_argument("-p", "--port", type=int, default=8000, help="Server port")
+    serve_p.add_argument("--host", default="0.0.0.0", help="Server host")
+    serve_p.add_argument("--no-gui", action="store_true", help="API only, no GUI")
+
     args = parser.parse_args()
-    
-    if args.command == 'clone':
-        print(f"Cloning {args.url}...")
-        cloner = WebsiteCloner(
-            base_url=args.url,
-            output_dir=args.output,
-            depth=args.depth,
-            concurrency=args.concurrency,
-            delay=args.delay,
-        )
-        asyncio.run(cloner.clone_site())
-        
-    elif args.command == 'scroll':
-        print(f"Scrolling {args.url}...")
-        handler = InvisibleContentHandler(args.url, headless=args.headless)
-        output_file = Path(args.output) / 'scrolled_page.html'
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        html = asyncio.run(handler.expand_hidden_elements(args.url, output_file))
-        print(f"Saved to {output_file}")
-        
-    elif args.command == 'images-only':
-        print(f"Downloading images from {args.url}...")
-        # Simple image downloader - will be enhanced
-        handler = InvisibleContentHandler(args.url, headless=True)
-        output_dir = Path(args.output)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        async def extract_images():
-            html = await handler.expand_hidden_elements(args.url)
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html, 'lxml')
-            imgs = soup.find_all('img', src=True)
-            print(f"Found {len(imgs)} images")
-            
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                for i, img in enumerate(imgs):
-                    src = img['src']
-                    if src.startswith(('http://', 'https://')):
-                        try:
-                            async with session.get(src) as resp:
-                                if resp.status == 200:
-                                    img_name = src.split('/')[-1].split('?')[0] or f'image_{i}.jpg'
-                                    img_path = output_dir / img_name
-                                    img_path.write_bytes(await resp.read())
-                                    print(f"  Downloaded: {img_name}")
-                        except Exception as e:
-                            print(f"  Failed: {src} - {e}")
-        
-        asyncio.run(extract_images())
-        print(f"Images saved to {output_dir}")
-        
-    elif args.command == 'text-only':
-        print(f"Extracting text from {args.url}...")
-        handler = InvisibleContentHandler(args.url, headless=True)
-        output_dir = Path(args.output)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        async def extract_text():
-            html = await handler.expand_hidden_elements(args.url)
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html, 'lxml')
-            
-            # Remove script and style elements
-            for tag in soup(['script', 'style']):
-                tag.decompose()
-                
-            text = soup.get_text(separator='\n', strip=True)
-            
-            # Save text
-            url_parsed = urlparse(args.url)
-            text_file = output_dir / f"{url_parsed.netloc.replace('.', '_')}.txt"
-            text_file.write_text(text, encoding='utf-8')
-            print(f"Text saved to {text_file}")
-            print(f"Extracted {len(text)} characters")
-        
-        from urllib.parse import urlparse
-        asyncio.run(extract_text())
-        
-    elif args.command == 'videos-only':
-        print(f"Downloading videos from {args.url}...")
-        from .advanced import VideoDownloader
-        
-        output_dir = Path(args.output)
-        downloader = VideoDownloader(str(output_dir))
-        
-        # For now, just download from the main URL
-        # In future, crawl page to find all video URLs
-        asyncio.run(downloader.download_videos([args.url]))
-        print(f"Videos saved to {output_dir}")
-        
-    elif args.command == 'mobile-capture':
-        print(f"Capturing {args.url} as {args.device}...")
-        from .advanced import MobileEmulator
-        
-        emulator = MobileEmulator()
-        output_file = Path(args.output)
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        html = asyncio.run(emulator.capture_with_device(args.url, args.device, output_file))
-        print(f"Mobile capture saved to {output_file} ({len(html)} bytes)")
-        
-    elif args.command == 'login':
-        print(f"Interactive login for {args.url}...")
-        from .advanced import AuthManager
-        
-        auth = AuthManager()
-        cookies = asyncio.run(auth.interactive_login(args.url, args.cookies))
-        print(f"Saved {len(cookies)} cookies")
-        
-    elif args.command == 'archive':
-        print(f"Creating archive of {args.input_dir}...")
-        from .advanced import ArchiveManager
-        
-        output_zip = args.output or f"{args.input_dir}.zip"
-        zip_path = ArchiveManager.create_zip(args.input_dir, output_zip)
-        print(f"Archive created: {zip_path}")
-        
-    elif args.command == 'upload':
-        print(f"Uploading {args.local_dir} to {args.host}...")
-        from .advanced import FTPUploader
-        
-        uploader = FTPUploader(args.host, args.user, args.password)
-        asyncio.run(uploader.upload_directory(args.local_dir, args.remote))
-        print("Upload complete!")
-        
-    elif args.command == 'deep-crawl':
-        print(f"Deep crawling {args.url}...")
-        handler = InvisibleContentHandler(args.url)
-        urls = asyncio.run(handler.discover_all())
-        print(f"Discovered {len(urls)} URLs")
-        
-    elif args.command == 'serve':
-        print("Starting web GUI...")
-        try:
-            from .api import start_server
-            start_server(host=args.host, port=args.port)
-        except ImportError:
-            print("FastAPI not installed. Run: pip install fastapi uvicorn")
-            sys.exit(1)
-            
+
+    if args.command == "clone":
+        _handle_clone(args)
+    elif args.command == "images":
+        _handle_images(args)
+    elif args.command == "text":
+        _handle_text(args)
+    elif args.command == "serve":
+        _handle_serve(args)
     else:
         parser.print_help()
+        sys.exit(0)
 
 
-if __name__ == '__main__':
+def _handle_clone(args):
+    """Handle clone command."""
+    from .core.cloner import SiteCloner
+    from .core.invisible import InvisibleContentEngine
+
+    print(f"🚀 Cloning {args.url}...")
+
+    cloner = SiteCloner(
+        output_dir=args.output,
+        depth=args.depth,
+        concurrency=args.concurrency,
+        delay=args.delay,
+        use_tor=args.tor
+    )
+
+    async def run():
+        if args.discover_invisible:
+            print("🔍 Discovering invisible content...")
+            engine = InvisibleContentEngine(use_tor=args.tor)
+            expanded = await engine.expand_all_content(args.url)
+            output_path = Path(args.output) / "expanded.html"
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(expanded, encoding="utf-8")
+            print(f"✓ Saved expanded content to {output_path}")
+
+        mode = "dynamic" if args.dynamic else "static"
+        await cloner.clone_site(args.url, mode=mode)
+
+    asyncio.run(run())
+    print(f"✅ Clone complete! Output: {args.output}")
+
+
+def _handle_images(args):
+    """Handle images command."""
+    from .core.cloner import SiteCloner
+    from bs4 import BeautifulSoup
+    import aiohttp
+
+    print(f"📸 Downloading images from {args.url}...")
+
+    async def run():
+        cloner = SiteCloner(output_dir=args.output, depth=args.depth)
+        output_dir = Path(args.output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        html = await cloner.fetch_page(args.url)
+        if not html:
+            print("❌ Failed to fetch page")
+            return
+
+        soup = BeautifulSoup(html, "lxml")
+        imgs = soup.find_all("img", src=True)
+        print(f"Found {len(imgs)} images")
+
+        async with aiohttp.ClientSession() as session:
+            for i, img in enumerate(imgs[:50]):
+                src = img.get("src", "")
+                if src.startswith(("http://", "https://")):
+                    try:
+                        async with session.get(src) as resp:
+                            if resp.status == 200:
+                                name = src.split("/")[-1].split("?")[0] or f"image_{i}.jpg"
+                                path = output_dir / name
+                                path.write_bytes(await resp.read())
+                                print(f"  ✓ {name}")
+                    except Exception as e:
+                        print(f"  ✗ {src}: {e}")
+
+    asyncio.run(run())
+    print(f"✅ Images saved to {args.output}")
+
+
+def _handle_text(args):
+    """Handle text command."""
+    from .core.cloner import SiteCloner
+    from bs4 import BeautifulSoup
+    from urllib.parse import urlparse
+
+    print(f"📝 Extracting text from {args.url}...")
+
+    async def run():
+        cloner = SiteCloner(output_dir=args.output, depth=args.depth)
+        output_dir = Path(args.output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        html = await cloner.fetch_page(args.url)
+        if not html:
+            print("❌ Failed to fetch page")
+            return
+
+        soup = BeautifulSoup(html, "lxml")
+        for tag in soup(["script", "style"]):
+            tag.decompose()
+
+        text = soup.get_text(separator="\n", strip=True)
+
+        parsed = urlparse(args.url)
+        out_file = output_dir / f"{parsed.netloc.replace('.', '_')}.txt"
+        out_file.write_text(text, encoding="utf-8")
+
+        print(f"✓ Extracted {len(text)} characters")
+
+    asyncio.run(run())
+    print(f"✅ Text saved to {args.output}")
+
+
+def _handle_serve(args):
+    """Handle serve command."""
+    from .api.server import start_api
+    from pathlib import Path
+
+    gui_dir = None if args.no_gui else str(Path(__file__).parent / "gui")
+    print(f"🌐 Starting web-all server on http://{args.host}:{args.port}")
+    if gui_dir:
+        print(f"   Serving GUI from {gui_dir}")
+
+    start_api(host=args.host, port=args.port, gui_dir=gui_dir)
+
+
+if __name__ == "__main__":
     main()
