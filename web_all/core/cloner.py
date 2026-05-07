@@ -92,11 +92,24 @@ class SiteCloner:
         logger.info(f"Tor proxy enabled: {self.tor_proxy}")
         
     def _normalize_url(self, url: str) -> str:
-        """Normalize URL for deduplication."""
+        """Normalize URL for deduplication.
+        
+        Args:
+            url: The URL to normalize
+            
+        Returns:
+            Normalized URL string with lowercase domain, stripped trailing slashes,
+            and sorted query parameters for consistent hashing.
+        """
         parsed = urlparse(url)
         netloc = parsed.netloc.lower()
         path = parsed.path.rstrip('/') or '/'
-        normalized = urlunparse((parsed.scheme, netloc, path, '', parsed.query, ''))
+        
+        # Sort query parameters for consistent normalization
+        query_params = sorted(parsed.query.split('&')) if parsed.query else []
+        query = '&'.join(filter(None, query_params))
+        
+        normalized = urlunparse((parsed.scheme, netloc, path, '', query, ''))
         return normalized
     
     def _is_internal_url(self, url: str, base_domain: str) -> bool:

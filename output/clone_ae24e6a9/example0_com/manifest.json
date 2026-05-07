@@ -1,0 +1,25 @@
+{
+  "start_url": "https://example0.com",
+  "base_domain": "example0.com",
+  "mode": "static",
+  "use_tor": false,
+  "timestamp": "2026-05-07T23:52:23.137282",
+  "settings": {
+    "depth": 2,
+    "concurrency": 5,
+    "delay": 0.5,
+    "auto_organize": true,
+    "download_all_assets": true
+  },
+  "visited_count": 0,
+  "assets_count": 0,
+  "stats": {
+    "pages": 0,
+    "images": 0,
+    "css": 0,
+    "js": 0,
+    "other": 0,
+    "errors": 1
+  },
+  "output_directory": "output/clone_ae24e6a9/example0_com"
+}

@@ -52,6 +52,13 @@ class CloneRequest(BaseModel):
     ai_enabled: bool = False
     everything: bool = False
     output_name: Optional[str] = None
+    concurrency: int = 5
+    delay: float = 0.5
+    user_agent: Optional[str] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary using model_dump (Pydantic v2)."""
+        return self.model_dump()
 
 
 class AIConfigRequest(BaseModel):
@@ -79,7 +86,8 @@ async def run_clone_job(job_id: str, request: CloneRequest):
 
         if request.mode == "everything" or request.everything:
             jobs[job_id]["everything"] = True
-            request = request.copy(update={
+            # Create updated request with new values using model_copy (Pydantic v2)
+            request = request.model_copy(update={
                 "discover_invisible": True,
                 "mode": "dynamic",
                 "depth": max(request.depth, 5),
@@ -87,7 +95,7 @@ async def run_clone_job(job_id: str, request: CloneRequest):
             })
 
         if request.mode == "deep-crawl":
-            request = request.copy(update={
+            request = request.model_copy(update={
                 "discover_invisible": True,
                 "mode": "dynamic",
                 "depth": max(request.depth, 5)
@@ -96,7 +104,10 @@ async def run_clone_job(job_id: str, request: CloneRequest):
         cloner = SiteCloner(
             output_dir=str(output_path),
             depth=request.depth,
-            use_tor=request.use_tor
+            concurrency=request.concurrency,
+            delay=request.delay,
+            use_tor=request.use_tor,
+            user_agent=request.user_agent
         )
         
         if request.discover_invisible and request.mode in ["static", "dynamic"]:
@@ -166,13 +177,13 @@ async def root():
         if index_file.exists():
             return FileResponse(str(index_file), media_type="text/html")
 
-    return {"message": "web-all API is running", "version": "2.0.0"}
+    return {"message": "web-all API is running", "version": "3.0.0"}
 
 
 @app.get("/api/v1/health")
 async def api_health():
     """API health check endpoint."""
-    return {"message": "web-all API is running", "version": "2.0.0"}
+    return {"message": "web-all API is running", "version": "3.0.0"}
 
 
 @app.post("/api/v1/clone")
@@ -182,7 +193,7 @@ async def create_clone_job(request: CloneRequest, background_tasks: BackgroundTa
     
     jobs[job_id] = {
         "id": job_id,
-        "request": request.dict(),
+        "request": request.to_dict(),
         "status": "queued",
         "created_at": datetime.now().isoformat()
     }
