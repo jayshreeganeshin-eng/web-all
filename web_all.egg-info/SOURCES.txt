@@ -21,3 +21,4 @@ web_all_project/web_all/core/cloner.py
 web_all_project/web_all/core/invisible.py
 web_all_project/web_all/utils/__init__.py
 web_all_project/web_all/utils/ai_engine.py
+web_all_project/web_all/utils/zip_utils.py
