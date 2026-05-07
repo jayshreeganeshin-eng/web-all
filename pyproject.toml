@@ -44,9 +44,15 @@ Homepage = "https://github.com/web-all/web-all"
 Documentation = "https://github.com/web-all/web-all#readme"
 Repository = "https://github.com/web-all/web-all.git"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["web_all*"]
+
+[tool.setuptools.package-data]
+"web_all" = ["gui/*"]
 
 [tool.black]
 line-length = 100

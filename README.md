@@ -91,6 +91,12 @@ web-all clone https://example.com -o mysite --discover-invisible
 web-all clone https://example.com -o mysite --dynamic
 ```
 
+#### Run the everything capture:
+```bash
+web-all clone https://example.com -o mysite --everything
+```
+This enables dynamic rendering, hidden content discovery, a deeper site crawl, entire domain/subdomains capture, and automatically enables AI analysis when AI is configured.
+
 #### Clone through Tor (for .onion sites):
 ```bash
 web-all clone http://example.onion -o onion_site --tor
@@ -168,9 +174,20 @@ curl -X POST http://localhost:8000/api/v1/clone \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://example.com",
-    "mode": "static",
-    "depth": 3,
+    "mode": "everything",
+    "depth": 5,
     "discover_invisible": true
+  }'
+```
+
+### Example: Create Everything Capture Job
+```bash
+curl -X POST http://localhost:8000/api/v1/clone \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "everything": true,
+    "depth": 5
   }'
 ```
 

@@ -26,6 +26,7 @@ def main():
     clone_p.add_argument("--tor", action="store_true", help="Use Tor proxy")
     clone_p.add_argument("--dynamic", action="store_true", help="Use dynamic rendering")
     clone_p.add_argument("--discover-invisible", action="store_true", help="Discover hidden content")
+    clone_p.add_argument("--everything", action="store_true", help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl")
 
     # Images command
     img_p = subparsers.add_parser("images", help="Download all images")
@@ -76,6 +77,14 @@ def _handle_clone(args):
     )
 
     async def run():
+        if args.everything:
+            print("⚡ Running full everything capture: dynamic rendering, hidden content discovery, deeper crawl, and AI analysis")
+            args.dynamic = True
+            args.discover_invisible = True
+            args.ai_enabled = True
+            if args.depth < 4:
+                args.depth = 4
+
         if args.discover_invisible:
             print("🔍 Discovering invisible content...")
             engine = InvisibleContentEngine(use_tor=args.tor)

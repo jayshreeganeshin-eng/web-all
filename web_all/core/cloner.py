@@ -61,8 +61,12 @@ class SiteCloner:
         
         self.visited_urls: Set[str] = set()
         self.downloaded_assets: Set[str] = set()
+        self.url_map: Dict[str, Path] = {}
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": self.user_agent})
+        self.follow_external = False
+        self.include_subdomains = True
+        self.max_pages = 1000
         
         if use_tor:
             self._setup_tor_proxy()
@@ -89,16 +93,74 @@ class SiteCloner:
     def _normalize_url(self, url: str) -> str:
         """Normalize URL for deduplication."""
         parsed = urlparse(url)
-        # Remove fragment, normalize trailing slash
         netloc = parsed.netloc.lower()
         path = parsed.path.rstrip('/') or '/'
-        normalized = urlunparse((parsed.scheme, netloc, path, '', '', ''))
+        normalized = urlunparse((parsed.scheme, netloc, path, '', parsed.query, ''))
         return normalized
     
     def _is_internal_url(self, url: str, base_domain: str) -> bool:
         """Check if URL belongs to the same domain."""
         parsed = urlparse(url)
         return parsed.netloc == base_domain or parsed.netloc.endswith('.' + base_domain)
+
+    def _should_follow_link(self, url: str, base_domain: str) -> bool:
+        """Determine whether a link should be queued for crawling."""
+        if self.follow_external:
+            return True
+        parsed = urlparse(url)
+        if parsed.netloc == base_domain:
+            return True
+        if self.include_subdomains and parsed.netloc.endswith('.' + base_domain):
+            return True
+        return False
+
+    def _get_local_html_path(self, url: str) -> Path:
+        """Generate a local file path for a page URL."""
+        parsed = urlparse(url)
+        path = parsed.path.rstrip('/') or '/'
+        if path.endswith('/'):
+            path = path + 'index.html'
+        elif not path.endswith('.html'):
+            path = path.rstrip('/') + '/index.html'
+
+        if parsed.query:
+            query_hash = hashlib.md5(parsed.query.encode('utf-8')).hexdigest()[:8]
+            path = path.replace('.html', f'_{query_hash}.html')
+
+        domain = parsed.netloc.replace('.', '_').replace(':', '_')
+        return self.output_dir / domain / path.lstrip('/')
+
+    def _get_asset_path(self, url: str, asset_type: str) -> Path:
+        """Generate organized path for assets."""
+        parsed = urlparse(url)
+        
+        # Create domain-based folder structure
+        domain = parsed.netloc.replace('.', '_').replace(':', '_')
+        
+        if asset_type == 'images':
+            subdir = self.output_dir / domain / 'images'
+        elif asset_type == 'css':
+            subdir = self.output_dir / domain / 'css'
+        elif asset_type == 'js':
+            subdir = self.output_dir / domain / 'js'
+        else:
+            subdir = self.output_dir / domain / 'assets'
+        
+        # Generate unique filename
+        filename = os.path.basename(parsed.path) or f"asset_{hashlib.md5(url.encode()).hexdigest()[:8]}"
+        if parsed.query:
+            query_hash = hashlib.md5(parsed.query.encode('utf-8')).hexdigest()[:8]
+            filename = f"{query_hash}_{filename}"
+        
+        counter = 0
+        base_name, ext = os.path.splitext(filename)
+        output_path = subdir / filename
+        
+        while output_path.exists():
+            counter += 1
+            output_path = subdir / f"{base_name}_{counter}{ext}"
+        
+        return output_path
     
     async def fetch_page(self, url: str) -> Optional[str]:
         """Fetch page content with retry logic."""
@@ -225,8 +287,10 @@ class SiteCloner:
         
         # Generate unique filename
         filename = os.path.basename(parsed.path) or f"asset_{hashlib.md5(url.encode()).hexdigest()[:8]}"
+        if parsed.query:
+            query_hash = hashlib.md5(parsed.query.encode('utf-8')).hexdigest()[:8]
+            filename = f"{query_hash}_{filename}"
         
-        # Ensure unique filename
         counter = 0
         base_name, ext = os.path.splitext(filename)
         output_path = subdir / filename
@@ -236,33 +300,81 @@ class SiteCloner:
             output_path = subdir / f"{base_name}_{counter}{ext}"
         
         return output_path
+
+    def _get_local_html_path(self, url: str) -> Path:
+        """Generate the local HTML output path for a page URL."""
+        parsed = urlparse(url)
+        path = parsed.path.rstrip('/') or '/'
+        if path.endswith('/'):
+            path = f"{path}index.html"
+        elif not path.endswith('.html'):
+            path = f"{path.rstrip('/')}/index.html"
+
+        if parsed.query:
+            query_hash = hashlib.md5(parsed.query.encode('utf-8')).hexdigest()[:8]
+            path = path.replace('.html', f'_{query_hash}.html')
+
+        domain = parsed.netloc.replace('.', '_').replace(':', '_')
+        return self.output_dir / domain / path.lstrip('/')
     
     def save_html(self, html: str, url: str, output_path: Path):
         """Save HTML file with rewritten local links and organized structure."""
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        normalized = self._normalize_url(url)
+        self.url_map[normalized] = output_path
         
         parsed = urlparse(url)
-        
         soup = BeautifulSoup(html, 'lxml')
         
         # Rewrite links to work locally
         for tag in soup.find_all(['a', 'img', 'link', 'script'], recursive=True):
-            for attr in ['href', 'src']:
-                if tag.has_attr(attr):
-                    value = tag[attr]
-                    if value.startswith(('http://', 'https://')):
-                        # Convert absolute URLs to relative paths
-                        try:
-                            asset_parsed = urlparse(value)
-                            if asset_parsed.netloc == parsed.netloc:
-                                # Same domain - make relative
-                                rel_path = os.path.relpath(
-                                    self._get_asset_path(value, 'images' if attr == 'src' else 'css'),
-                                    output_path.parent
-                                )
-                                tag[attr] = rel_path
-                        except:
-                            pass
+            # page links
+            if tag.name == 'a' and tag.has_attr('href'):
+                original = tag['href']
+                if original and not original.startswith(('javascript:', 'mailto:', 'tel:', '#')):
+                    try:
+                        absolute = urljoin(url, original)
+                        local_path = self._get_local_html_path(absolute)
+                        rel_path = os.path.relpath(local_path, output_path.parent)
+                        tag['href'] = rel_path
+                    except Exception:
+                        pass
+
+            # image sources
+            if tag.name == 'img' and tag.has_attr('src'):
+                original = tag['src']
+                if original and not original.startswith(('data:', 'javascript:')):
+                    try:
+                        absolute = urljoin(url, original)
+                        local_path = self._get_asset_path(absolute, 'images')
+                        rel_path = os.path.relpath(local_path, output_path.parent)
+                        tag['src'] = rel_path
+                    except Exception:
+                        pass
+
+            # stylesheet links
+            if tag.name == 'link' and tag.has_attr('href') and 'stylesheet' in tag.get('rel', []):
+                original = tag['href']
+                if original and not original.startswith(('javascript:', 'data:')):
+                    try:
+                        absolute = urljoin(url, original)
+                        local_path = self._get_asset_path(absolute, 'css')
+                        rel_path = os.path.relpath(local_path, output_path.parent)
+                        tag['href'] = rel_path
+                    except Exception:
+                        pass
+
+            # javascript sources
+            if tag.name == 'script' and tag.has_attr('src'):
+                original = tag['src']
+                if original and not original.startswith(('javascript:', 'data:')):
+                    try:
+                        absolute = urljoin(url, original)
+                        local_path = self._get_asset_path(absolute, 'js')
+                        rel_path = os.path.relpath(local_path, output_path.parent)
+                        tag['src'] = rel_path
+                    except Exception:
+                        pass
         
         # Add metadata comment
         meta_comment = f"<!-- Cloned from {url} on {datetime.now().isoformat()} -->\n"
@@ -275,7 +387,8 @@ class SiteCloner:
     def save_asset(self, url: str, asset_type: str):
         """Download and save asset with organized folder structure."""
         try:
-            if url in self.downloaded_assets:
+            normalized = self._normalize_url(url)
+            if normalized in self.downloaded_assets:
                 return
             
             response = self.session.get(url, timeout=self.timeout)
@@ -286,7 +399,8 @@ class SiteCloner:
                 with open(output_path, 'wb') as f:
                     f.write(response.content)
                 
-                self.downloaded_assets.add(url)
+                self.downloaded_assets.add(normalized)
+                self.url_map[normalized] = output_path
                 
                 # Update stats
                 if asset_type == 'images':
@@ -333,6 +447,12 @@ class SiteCloner:
         
         queue = [(start_url, 0)]
         
+        if mode == 'everything':
+            self.follow_external = True
+            self.include_subdomains = True
+            self.depth = max(self.depth, 8)
+            self.max_pages = max(self.max_pages, 1000)
+
         logger.info(f"🚀 Starting clone of {start_url}")
         logger.info(f"   Mode: {mode}, Depth: {self.depth}, Output: {domain_dir}")
         
@@ -355,16 +475,7 @@ class SiteCloner:
             self.stats['pages'] += 1
             
             # Save HTML with organized path
-            parsed_current = urlparse(current_url)
-            path = parsed_current.path.rstrip('/') or '/index.html'
-            if path == '/':
-                path = '/index.html'
-            if not path.endswith('.html'):
-                path += '/index.html'
-            
-            # Organize pages by path structure
-            relative_path = path.lstrip('/')
-            output_file = domain_dir / relative_path
+            output_file = self._get_local_html_path(current_url)
             self.save_html(html, current_url, output_file)
             
             # Extract and download ALL assets by default
@@ -377,10 +488,15 @@ class SiteCloner:
             # Extract links for crawling
             if current_depth < self.depth:
                 links = self.extract_links(html, current_url)
-                for link in links:
-                    normalized = self._normalize_url(link)
-                    if normalized not in self.visited_urls and self._is_internal_url(link, base_domain):
-                        queue.append((link, current_depth + 1))
+            for link in links:
+                normalized = self._normalize_url(link)
+                if normalized in self.visited_urls:
+                    continue
+                if self._should_follow_link(link, base_domain):
+                    if len(self.visited_urls) >= self.max_pages:
+                        logger.info("Maximum page limit reached, stopping crawl.")
+                        break
+                    queue.append((link, current_depth + 1))
             
             await asyncio.sleep(self.delay)
         

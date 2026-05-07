@@ -23,6 +23,9 @@ from ..utils.zip_utils import create_zip_archive
 
 app = FastAPI(title="web-all API", version="3.0.0")
 
+# GUI directory used for serving the frontend at /
+GUI_DIR: Optional[str] = None
+
 # Job storage
 jobs: Dict[str, Dict[str, Any]] = {}
 
@@ -47,6 +50,7 @@ class CloneRequest(BaseModel):
     use_tor: bool = False
     discover_invisible: bool = False
     ai_enabled: bool = False
+    everything: bool = False
     output_name: Optional[str] = None
 
 
@@ -72,21 +76,61 @@ async def run_clone_job(job_id: str, request: CloneRequest):
         if request.ai_enabled and ai_config.get("enabled"):
             ai_engine = AIEngine(ai_config)
             jobs[job_id]["ai_status"] = "AI enabled"
-        
+
+        if request.mode == "everything" or request.everything:
+            jobs[job_id]["everything"] = True
+            request = request.copy(update={
+                "discover_invisible": True,
+                "mode": "dynamic",
+                "depth": max(request.depth, 5),
+                "ai_enabled": True
+            })
+
+        if request.mode == "deep-crawl":
+            request = request.copy(update={
+                "discover_invisible": True,
+                "mode": "dynamic",
+                "depth": max(request.depth, 5)
+            })
+
         cloner = SiteCloner(
             output_dir=str(output_path),
             depth=request.depth,
             use_tor=request.use_tor
         )
         
-        if request.discover_invisible:
+        if request.discover_invisible and request.mode in ["static", "dynamic"]:
             engine = InvisibleContentEngine(use_tor=request.use_tor)
             # First expand content, then clone
             expanded_html = await engine.expand_all_content(request.url)
-            # Save expanded page
             (output_path / "expanded.html").write_text(expanded_html)
-        
-        manifest = await cloner.clone_site(request.url, mode=request.mode)
+
+        if request.mode == "images":
+            html = await cloner.fetch_page(request.url)
+            if not html:
+                raise Exception("Failed to fetch page for image download")
+            assets = cloner.extract_assets(html, request.url)
+            image_urls = assets.get("images", [])
+            for image_url in image_urls:
+                cloner.save_asset(image_url, "images")
+            manifest = {"mode": "images", "image_count": cloner.stats["images"], "source_url": request.url}
+        elif request.mode == "text":
+            html = await cloner.fetch_page(request.url)
+            if not html:
+                raise Exception("Failed to fetch page for text extraction")
+            from bs4 import BeautifulSoup
+            from urllib.parse import urlparse
+            soup = BeautifulSoup(html, "lxml")
+            for tag in soup(["script", "style"]):
+                tag.decompose()
+            text = soup.get_text(separator="\n", strip=True)
+            output_path.mkdir(parents=True, exist_ok=True)
+            parsed = urlparse(request.url)
+            out_file = output_path / f"{parsed.netloc.replace('.', '_')}.txt"
+            out_file.write_text(text, encoding="utf-8")
+            manifest = {"mode": "text", "source_url": request.url, "characters": len(text)}
+        else:
+            manifest = await cloner.clone_site(request.url, mode=request.mode)
         
         # Run AI analysis if enabled
         if ai_engine:
@@ -116,7 +160,18 @@ async def run_clone_job(job_id: str, request: CloneRequest):
 
 @app.get("/")
 async def root():
-    """API health check."""
+    """Serve the GUI when available, otherwise show API health."""
+    if GUI_DIR and Path(GUI_DIR).exists():
+        index_file = Path(GUI_DIR) / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file), media_type="text/html")
+
+    return {"message": "web-all API is running", "version": "2.0.0"}
+
+
+@app.get("/api/v1/health")
+async def api_health():
+    """API health check endpoint."""
     return {"message": "web-all API is running", "version": "2.0.0"}
 
 
@@ -326,6 +381,9 @@ def start_api(host: str = "0.0.0.0", port: int = 8000, gui_dir: Optional[str] = 
     """Start the API server with optional GUI serving."""
     import uvicorn
     
+    global GUI_DIR
+    GUI_DIR = gui_dir
+
     # Mount GUI if directory provided
     if gui_dir and os.path.exists(gui_dir):
         app.mount("/", StaticFiles(directory=gui_dir, html=True), name="gui")
