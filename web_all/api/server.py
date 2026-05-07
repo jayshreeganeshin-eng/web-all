@@ -52,6 +52,15 @@ class CloneRequest(BaseModel):
     ai_enabled: bool = False
     everything: bool = False
     output_name: Optional[str] = None
+    # Web God & AI SEO options
+    web_god_mode: bool = False
+    auto_seo_enabled: bool = False
+    generate_sitemap: bool = False
+    schema_markup: bool = False
+    meta_tags_enhancement: bool = False
+    accessibility_check: bool = False
+    social_media_cards: bool = False
+    mobile_responsive_check: bool = False
 
 
 class AIConfigRequest(BaseModel):
@@ -76,6 +85,14 @@ async def run_clone_job(job_id: str, request: CloneRequest):
         if request.ai_enabled and ai_config.get("enabled"):
             ai_engine = AIEngine(ai_config)
             jobs[job_id]["ai_status"] = "AI enabled"
+        
+        # Web God mode handling
+        web_god_mode = request.web_god_mode or request.everything
+        auto_seo = request.auto_seo_enabled or web_god_mode
+        
+        if web_god_mode:
+            jobs[job_id]["web_god_mode"] = True
+            jobs[job_id]["message"] = "🌟 WEB GOD MODE ACTIVATED! 🌟"
 
         if request.mode == "everything" or request.everything:
             jobs[job_id]["everything"] = True
@@ -83,7 +100,8 @@ async def run_clone_job(job_id: str, request: CloneRequest):
                 "discover_invisible": True,
                 "mode": "dynamic",
                 "depth": max(request.depth, 5),
-                "ai_enabled": True
+                "ai_enabled": True,
+                "web_god_mode": True
             })
 
         if request.mode == "deep-crawl":
@@ -96,7 +114,15 @@ async def run_clone_job(job_id: str, request: CloneRequest):
         cloner = SiteCloner(
             output_dir=str(output_path),
             depth=request.depth,
-            use_tor=request.use_tor
+            use_tor=request.use_tor,
+            web_god_mode=web_god_mode,
+            auto_seo_enabled=auto_seo,
+            generate_sitemap=request.generate_sitemap or web_god_mode,
+            schema_markup=request.schema_markup or web_god_mode,
+            meta_tags_enhancement=request.meta_tags_enhancement or web_god_mode,
+            accessibility_check=request.accessibility_check or web_god_mode,
+            social_media_cards=request.social_media_cards or web_god_mode,
+            mobile_responsive_check=request.mobile_responsive_check or web_god_mode
         )
         
         if request.discover_invisible and request.mode in ["static", "dynamic"]:
