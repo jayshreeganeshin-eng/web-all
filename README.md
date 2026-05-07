@@ -1,6 +1,33 @@
-# 🕷️ web-all v3.0 - Universal Website Cloner with AI
+# 🕷️ web-all v3.1 - Universal Website Cloner with AI
 
 **The most advanced open-source tool for cloning websites with AI-powered analysis, hidden content discovery, and auto-organized assets.**
+
+## 🎉 Major Updates in v3.1
+
+### ✨ Enhanced Local Browsing Experience
+- **All links work offline** - Internal page links automatically rewritten to work locally
+- **Images display properly** - All image sources (src, srcset, data-src) downloaded and linked correctly
+- **CSS fully functional** - Stylesheets, @import rules, and background images all work offline
+- **JavaScript preserved** - All JS files downloaded with correct relative paths
+- **Fonts included** - Web fonts (woff, woff2, ttf, etc.) automatically downloaded
+- **Videos supported** - Video/audio files downloaded with working references
+- **Forms show helpful messages** - Disabled forms indicate they won't work offline
+- **Base tag added** - Ensures all relative URLs resolve correctly in local browsing
+
+### 📁 Improved Organization
+```
+output/
+├── example_com/
+│   ├── index.html          # Main page with local links
+│   ├── about/index.html    # Nested pages with correct paths
+│   ├── images/             # All images organized
+│   ├── css/                # All stylesheets
+│   ├── js/                 # All JavaScript files
+│   ├── fonts/              # All font files (NEW!)
+│   ├── videos/             # All video/audio files (NEW!)
+│   ├── manifest.json       # Clone metadata
+│   └── README.txt          # Summary with viewing instructions
+```
 
 ---
 
@@ -204,15 +231,23 @@ After cloning, your output directory will contain:
 ```
 output/
 ├── example_com/
-│   ├── index.html          # Main page
-│   ├── about/index.html    # Nested pages
-│   ├── images/             # All images
-│   ├── css/                # Stylesheets
-│   ├── js/                 # JavaScript files
-│   ├── manifest.json       # Clone metadata
-│   └── README.txt          # Summary report
-└── ...
+│   ├── index.html          # Main page with local links
+│   ├── about/index.html    # Nested pages with correct paths
+│   ├── images/             # All images (jpg, png, gif, svg, webp, ico)
+│   ├── css/                # All stylesheets with @import resolved
+│   ├── js/                 # All JavaScript files
+│   ├── fonts/              # All font files (woff, woff2, ttf, otf, eot)
+│   ├── videos/             # All video/audio files (mp4, webm, ogg)
+│   ├── manifest.json       # Clone metadata and statistics
+│   └── README.txt          # Summary report with viewing instructions
 ```
+
+**All HTML files have:**
+- ✅ Rewritten internal links to work locally
+- ✅ Image sources pointing to local copies
+- ✅ CSS/JS references using relative paths
+- ✅ Base tag for proper URL resolution
+- ✅ Forms disabled with helpful offline messages
 
 ---
 

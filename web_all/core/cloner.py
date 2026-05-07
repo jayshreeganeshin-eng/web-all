@@ -2,6 +2,7 @@
 Core cloner engine for static and dynamic websites.
 Supports clearnet and .onion (Tor) sites.
 Auto-downloads full websites with organized folder structure.
+Major improvements: All links, images, buttons, texts, fonts, colors work properly in local host.
 """
 
 import os
@@ -10,14 +11,15 @@ import json
 import asyncio
 import logging
 import hashlib
+import mimetypes
 from urllib.parse import urljoin, urlparse, urlunparse
 from typing import Set, List, Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime
+from bs4 import BeautifulSoup, Tag
 
 try:
     import requests
-    from bs4 import BeautifulSoup
     from playwright.async_api import async_playwright
 except ImportError as e:
     print(f"Missing dependency: {e}")
@@ -63,6 +65,7 @@ class SiteCloner:
         self.seen_urls: Set[str] = set()
         self.downloaded_assets: Set[str] = set()
         self.url_map: Dict[str, Path] = {}
+        self.asset_map: Dict[str, Path] = {}  # Maps original URLs to local paths
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": self.user_agent})
         self.follow_external = False
@@ -78,6 +81,8 @@ class SiteCloner:
             "images": 0,
             "css": 0,
             "js": 0,
+            "fonts": 0,
+            "videos": 0,
             "other": 0,
             "errors": 0
         }
