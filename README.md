@@ -1,158 +1,234 @@
-# 🕷️ web-all - Universal Website Cloner & Crawler
+# 🕷️ web-all v3.0 - Universal Website Cloner with AI
 
-**The most advanced open-source tool for downloading entire websites including hidden content, videos, images, and text.**
+**The most advanced open-source tool for cloning websites with AI-powered analysis, hidden content discovery, and auto-organized assets.**
 
-## ✨ Features
+---
+
+## ✨ Key Features
 
 ### Core Capabilities
-- **Full Website Cloning** - Download complete websites with all assets (HTML, CSS, JS, images)
-- **Invisible Content Discovery** - Uncover hidden content behind clicks, hovers, accordions, and lazy-loading
-- **Infinite Scroll Support** - Automatically scroll pages to load all dynamic content
-- **Sitemap Parsing** - Discover pages from sitemap.xml that aren't linked
-- **Path Guessing** - Find hidden admin/login pages automatically
-- **Mobile Emulation** - Capture mobile-specific content (iPhone, Pixel, iPad)
-- **Video Downloads** - Extract videos using yt-dlp integration
-- **Text Extraction** - Clean text extraction from any website
-- **Image Gallery Download** - Download all images from galleries
-- **Interactive Login** - Manual login support with cookie saving
-- **ZIP Archiving** - Package cloned sites into ZIP files
-- **FTP Upload** - Direct upload to hosting providers (InfinityFree, etc.)
+| Feature | Description |
+|---------|-------------|
+| 🌐 **Full Website Cloning** | Download complete websites with HTML, CSS, JS, images |
+| 🔍 **Hidden Content Discovery** | Uncover content behind clicks, hovers, accordions, lazy-loading |
+| 🤖 **AI-Powered Analysis** | Auto-summarize, extract structured data, tag content (Ollama/OpenRouter/Groq) |
+| 🧅 **Tor/.onion Support** | Clone hidden services through Tor network |
+| 📱 **Dynamic Rendering** | Headless browser support for JavaScript-heavy sites |
+| 🗂️ **Auto-Organization** | Assets organized by type: /images, /css, /js folders |
+| 📦 **ZIP Export** | Package cloned sites for easy sharing |
 
 ### Interfaces
-- **CLI** - Full-featured command-line interface
-- **Web GUI** - Beautiful browser-based interface
+- **CLI** - Fast command-line interface
+- **Web GUI** - Beautiful browser-based dashboard
 - **REST API** - Programmatic access with job queue
 
 ---
 
-## 🚀 One-Command Installation
+## 🚀 Installation
 
-### For Noob Users (Easiest)
+### Method 1: Quick Install (Recommended)
 ```bash
-curl -sSL https://raw.githubusercontent.com/web-all/web-all/main/install.sh | bash
+pip install -e .
+python -m playwright install chromium
 ```
 
-Or if you've already cloned the repo:
-```bash
-cd /path/to/web-all && ./install.sh
-```
-
-### Alternative Methods
-
-**Via pip:**
+### Method 2: From PyPI
 ```bash
 pip install web-all
 python -m playwright install chromium
 ```
 
-**Via Docker:**
+### Verify Installation
 ```bash
-docker run -d --name web-all -p 8000:8000 -v $(pwd)/output:/app/output web-all:latest
+web-all --help
 ```
 
 ---
 
-## 💻 How to Run Locally
+## 📖 How to Use - Step by Step
 
-### CLI Mode (Command Line)
+### 🟢 Level 1: Easy (Beginner)
 
-#### 1. Clone a Complete Website
+#### Clone a website with one command:
 ```bash
-web-all clone https://example.com -o ./mycopy --depth 5 --discover-invisible
+web-all clone https://example.com -o mysite
 ```
 
-#### 2. Download All Images
+#### Start the Web GUI:
 ```bash
-web-all images-only https://photogallery.com -o ./images --discover-invisible
-```
-
-#### 3. Extract Text Content
-```bash
-web-all text-only https://docs.example.com -o ./text --depth 3
-```
-
-#### 4. Download Videos
-```bash
-web-all videos-only https://youtube.com/playlist -o ./videos
-```
-
-#### 5. Capture as Mobile Device
-```bash
-web-all mobile-capture https://example.com -o mobile.html --device iphone12
-```
-
-#### 6. Interactive Login (for protected sites)
-```bash
-web-all login https://mysite.com/login -c cookies.json
-```
-
-#### 7. Deep Crawl with Sitemap
-```bash
-web-all deep-crawl https://example.com --sitemap --path-guess
-```
-
-#### 8. Create ZIP Archive
-```bash
-web-all archive ./mycopy -o backup.zip
-```
-
-#### 9. Upload to FTP (InfinityFree)
-```bash
-web-all upload ./mycopy --host ftpupload.net --user epiz_XXXXXX --password YOUR_PASS
-```
-
-#### 10. Start Web GUI Server
-```bash
-web-all serve --port 8000
+web-all serve
 # Open http://localhost:8000 in your browser
 ```
 
-### GUI Mode (Web Interface)
-
-1. **Start the server:** `web-all serve`
-2. **Open browser:** Navigate to `http://localhost:8000`
-3. **Use the interface:** Enter URL, select mode, click "Start Download"
-
----
-
-## 🌐 How to Host on InfinityFree.com
-
-### Method 1: Manual Upload
-1. Clone locally: `web-all clone https://target-site.com -o ./for-upload`
-2. Upload files via FTP to `/htdocs/` on InfinityFree
-3. Access at your domain!
-
-### Method 2: Direct FTP Upload
+#### Download all images:
 ```bash
-web-all upload ./for-upload --host ftpupload.net --user epiz_XXXXXX --password YOUR_PASSWORD
+web-all images https://example.com -o images
 ```
 
-> ⚠️ Cloned sites are static mirrors. Dynamic features won't work.
+#### Extract text content:
+```bash
+web-all text https://example.com -o text
+```
 
 ---
 
-## 📋 Command Reference
+### 🟡 Level 2: Normal (Intermediate)
 
-| Command | Description |
-|---------|-------------|
-| `clone` | Full website mirror |
-| `scroll` | Single page infinite scroll |
-| `images-only` | Download all images |
-| `text-only` | Extract clean text |
-| `videos-only` | Download videos |
-| `mobile-capture` | Capture as mobile device |
-| `login` | Interactive login |
-| `archive` | Create ZIP archive |
-| `upload` | Upload to FTP |
-| `deep-crawl` | Crawl with sitemap |
-| `serve` | Start web GUI |
+#### Clone with deeper crawl:
+```bash
+web-all clone https://example.com -o mysite -d 5 -c 10
+```
+- `-d 5`: Crawl 5 levels deep
+- `-c 10`: Use 10 concurrent connections
+
+#### Discover hidden content:
+```bash
+web-all clone https://example.com -o mysite --discover-invisible
+```
+
+#### Use dynamic rendering (for JavaScript sites):
+```bash
+web-all clone https://example.com -o mysite --dynamic
+```
+
+#### Clone through Tor (for .onion sites):
+```bash
+web-all clone http://example.onion -o onion_site --tor
+```
+
+#### Start API server only (no GUI):
+```bash
+web-all serve --no-gui --port 8080
+```
 
 ---
 
-## 🛡️ Ethics
+### 🔴 Level 3: Advanced (Expert)
 
-- Respects `robots.txt` by default
-- Configurable rate limiting
-- Use responsibly and respect website terms
+#### Full clone with AI analysis:
+```bash
+# 1. Start server with AI enabled
+web-all serve
+
+# 2. Configure AI via API or GUI
+curl -X POST http://localhost:8000/api/v1/ai/config \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":true,"provider":"ollama","model":"llama3"}'
+
+# 3. Clone with AI
+curl -X POST http://localhost:8000/api/v1/clone \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com","depth":3,"ai_enabled":true}'
+```
+
+#### Use external AI providers:
+```bash
+# OpenRouter (free tier)
+curl -X POST http://localhost:8000/api/v1/ai/config \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":true,"provider":"openrouter","api_key":"your-key"}'
+
+# Groq Cloud
+curl -X POST http://localhost:8000/api/v1/ai/config \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":true,"provider":"groq","api_key":"your-key","model":"llama3-8b-8192"}'
+```
+
+#### Programmatic usage in Python:
+```python
+from web_all import SiteCloner, InvisibleContentEngine
+
+# Clone a site
+cloner = SiteCloner(output_dir="./output", depth=3)
+await cloner.clone_site("https://example.com")
+
+# Discover hidden content
+engine = InvisibleContentEngine()
+expanded_html = await engine.expand_all_content("https://example.com")
+```
+
+---
+
+## 📋 API Reference
+
+### REST Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/clone` | POST | Create clone job |
+| `/api/v1/jobs/{id}` | GET | Get job status |
+| `/api/v1/jobs` | GET | List all jobs |
+| `/api/v1/download/{id}` | GET | Download ZIP |
+| `/api/v1/ai/config` | POST/GET | Configure AI |
+| `/api/v1/ai/providers` | GET | List AI providers |
+
+### Example: Create Clone Job
+```bash
+curl -X POST http://localhost:8000/api/v1/clone \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "mode": "static",
+    "depth": 3,
+    "discover_invisible": true
+  }'
+```
+
+---
+
+## 🗂️ Output Structure
+
+After cloning, your output directory will contain:
+```
+output/
+├── example_com/
+│   ├── index.html          # Main page
+│   ├── about/index.html    # Nested pages
+│   ├── images/             # All images
+│   ├── css/                # Stylesheets
+│   ├── js/                 # JavaScript files
+│   ├── manifest.json       # Clone metadata
+│   └── README.txt          # Summary report
+└── ...
+```
+
+---
+
+## 🤖 AI Features
+
+When AI is enabled, web-all can:
+- **Summarize** webpage content
+- **Extract structured data** (products, articles, contacts)
+- **Auto-tag** content with relevant keywords
+- **Clean HTML** by removing navigation/ads
+
+Supported providers:
+| Provider | Free Tier | API Key Required |
+|----------|-----------|------------------|
+| Ollama | ✅ Yes (local) | ❌ No |
+| OpenRouter | ✅ Yes | ✅ Yes |
+| Groq | ✅ Yes | ✅ Yes |
+| HuggingFace | ✅ Yes | ✅ Yes |
+
+---
+
+## 🛡️ Ethics & Legal
+
+- ✅ Respects `robots.txt` (configurable)
+- ✅ Configurable rate limiting
+- ✅ User-agent identification
+- ⚠️ Always respect website terms of service
+- ⚠️ Use responsibly for legal purposes only
+
+---
+
+## 📦 Requirements
+
+- Python 3.10+
+- Playwright (auto-installed)
+- Optional: Tor Browser (for .onion sites)
+- Optional: Ollama/local AI (for AI features)
+
+---
 
 **Made with ❤️ for the web archiving community**

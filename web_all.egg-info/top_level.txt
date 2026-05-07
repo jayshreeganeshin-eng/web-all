@@ -1,2 +1,0 @@
-web_all
-web_all_project
