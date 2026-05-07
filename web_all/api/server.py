@@ -20,6 +20,7 @@ from ..core.cloner import SiteCloner
 from ..core.invisible import InvisibleContentEngine
 from ..utils.ai_engine import AIEngine, get_available_providers, validate_api_key
 from ..utils.zip_utils import create_zip_archive
+from ..utils.security import is_safe_url, sanitize_filename
 
 app = FastAPI(title="web-all API", version="3.0.0")
 
@@ -178,6 +179,13 @@ async def api_health():
 @app.post("/api/v1/clone")
 async def create_clone_job(request: CloneRequest, background_tasks: BackgroundTasks):
     """Create a new cloning job."""
+    # Security: Validate URL to prevent SSRF
+    if not is_safe_url(request.url):
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid or unsafe URL. URL must use http/https and not point to internal addresses."
+        )
+    
     job_id = str(uuid.uuid4())
     
     jobs[job_id] = {
@@ -232,6 +240,7 @@ async def get_job_status(job_id: str):
 async def download_job_output(job_id: str):
     """Download the cloned site as a ZIP file or access individual files."""
     import tempfile
+    import stat
     
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -246,16 +255,17 @@ async def download_job_output(job_id: str):
     if not output_path.exists():
         raise HTTPException(status_code=404, detail="Output not found")
     
-    # Create ZIP archive for download
+    # Create ZIP archive for download with secure temp directory
     try:
-        temp_dir = tempfile.mkdtemp()
+        temp_dir = tempfile.mkdtemp(mode=0o700)  # Restrict permissions to owner only
         zip_path = Path(temp_dir) / f"{output_path.name}.zip"
         create_zip_archive(str(output_path), str(zip_path))
         
         return FileResponse(
             str(zip_path),
             media_type="application/zip",
-            filename=f"{output_path.name}.zip"
+            filename=f"{output_path.name}.zip",
+            headers={"X-Accel-Buffering": "no"}  # Disable buffering for large files
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create ZIP: {str(e)}")
@@ -264,6 +274,8 @@ async def download_job_output(job_id: str):
 @app.get("/api/v1/download/{job_id}/view/{filename:path}")
 async def view_file(job_id: str, filename: str):
     """View a specific file from the cloned site."""
+    import re
+    
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     
@@ -273,7 +285,17 @@ async def view_file(job_id: str, filename: str):
         raise HTTPException(status_code=400, detail="Job not completed")
     
     output_path = Path(job.get("output_path", ""))
-    file_path = output_path / filename
+    
+    # Security: Validate filename to prevent path traversal
+    if not filename or '..' in filename or filename.startswith('/'):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    # Resolve to absolute path and ensure it's within output_path
+    file_path = (output_path / filename).resolve()
+    try:
+        file_path.relative_to(output_path.resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid file path")
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")

@@ -88,6 +88,12 @@ def _handle_clone(args):
             if args.depth < 4:
                 args.depth = 4
 
+        # Security: Validate URL
+        from .utils.security import is_safe_url
+        if not is_safe_url(args.url):
+            print("❌ Error: Invalid or unsafe URL. URL must use http/https and not point to internal addresses.")
+            sys.exit(1)
+
         if args.discover_invisible:
             print("🔍 Discovering invisible content...")
             engine = InvisibleContentEngine(use_tor=args.tor)
@@ -123,6 +129,12 @@ def _handle_images(args):
     from .core.cloner import SiteCloner
     from bs4 import BeautifulSoup
     import aiohttp
+    from .utils.security import is_safe_url
+
+    # Security: Validate URL
+    if not is_safe_url(args.url):
+        print("❌ Error: Invalid or unsafe URL.")
+        sys.exit(1)
 
     print(f"📸 Downloading images from {args.url}...")
 
@@ -163,6 +175,12 @@ def _handle_text(args):
     from .core.cloner import SiteCloner
     from bs4 import BeautifulSoup
     from urllib.parse import urlparse
+    from .utils.security import is_safe_url
+
+    # Security: Validate URL
+    if not is_safe_url(args.url):
+        print("❌ Error: Invalid or unsafe URL.")
+        sys.exit(1)
 
     print(f"📝 Extracting text from {args.url}...")
 

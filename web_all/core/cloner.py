@@ -44,7 +44,8 @@ class SiteCloner:
         respect_robots: bool = False,
         auto_organize: bool = True,
         download_all_assets: bool = True,
-        save_metadata: bool = True
+        save_metadata: bool = True,
+        max_pages: int = 1000
     ):
         self.output_dir = Path(output_dir)
         self.depth = depth
@@ -58,6 +59,7 @@ class SiteCloner:
         self.auto_organize = auto_organize
         self.download_all_assets = download_all_assets
         self.save_metadata = save_metadata
+        self.max_pages = max_pages
         
         self.visited_urls: Set[str] = set()
         self.seen_urls: Set[str] = set()
@@ -67,7 +69,6 @@ class SiteCloner:
         self.session.headers.update({"User-Agent": self.user_agent})
         self.follow_external = False
         self.include_subdomains = True
-        self.max_pages = 1000
         
         if use_tor:
             self._setup_tor_proxy()
@@ -271,54 +272,6 @@ class SiteCloner:
             assets['js'].append(urljoin(base_url, script['src']))
         
         return assets
-    
-    def _get_asset_path(self, url: str, asset_type: str) -> Path:
-        """Generate organized path for assets."""
-        parsed = urlparse(url)
-        
-        # Create domain-based folder structure
-        domain = parsed.netloc.replace('.', '_').replace(':', '_')
-        
-        if asset_type == 'images':
-            subdir = self.output_dir / domain / 'images'
-        elif asset_type == 'css':
-            subdir = self.output_dir / domain / 'css'
-        elif asset_type == 'js':
-            subdir = self.output_dir / domain / 'js'
-        else:
-            subdir = self.output_dir / domain / 'assets'
-        
-        # Generate unique filename
-        filename = os.path.basename(parsed.path) or f"asset_{hashlib.md5(url.encode()).hexdigest()[:8]}"
-        if parsed.query:
-            query_hash = hashlib.md5(parsed.query.encode('utf-8')).hexdigest()[:8]
-            filename = f"{query_hash}_{filename}"
-        
-        counter = 0
-        base_name, ext = os.path.splitext(filename)
-        output_path = subdir / filename
-        
-        while output_path.exists():
-            counter += 1
-            output_path = subdir / f"{base_name}_{counter}{ext}"
-        
-        return output_path
-
-    def _get_local_html_path(self, url: str) -> Path:
-        """Generate the local HTML output path for a page URL."""
-        parsed = urlparse(url)
-        path = parsed.path.rstrip('/') or '/'
-        if path.endswith('/'):
-            path = f"{path}index.html"
-        elif not path.endswith('.html'):
-            path = f"{path.rstrip('/')}/index.html"
-
-        if parsed.query:
-            query_hash = hashlib.md5(parsed.query.encode('utf-8')).hexdigest()[:8]
-            path = path.replace('.html', f'_{query_hash}.html')
-
-        domain = parsed.netloc.replace('.', '_').replace(':', '_')
-        return self.output_dir / domain / path.lstrip('/')
     
     def save_html(self, html: str, url: str, output_path: Path):
         """Save HTML file with rewritten local links and organized structure."""
