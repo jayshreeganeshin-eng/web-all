@@ -60,6 +60,7 @@ class SiteCloner:
         self.save_metadata = save_metadata
         
         self.visited_urls: Set[str] = set()
+        self.seen_urls: Set[str] = set()
         self.downloaded_assets: Set[str] = set()
         self.url_map: Dict[str, Path] = {}
         self.session = requests.Session()
@@ -167,7 +168,7 @@ class SiteCloner:
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
-                if normalized in self.visited_urls:
+                if normalized in self.seen_urls:
                     return None
                     
                 logger.info(f"Fetching: {url}")
@@ -179,6 +180,7 @@ class SiteCloner:
                 )
                 
                 if response.status_code == 200:
+                    self.seen_urls.add(normalized)
                     self.visited_urls.add(normalized)
                     return response.text
                 else:
@@ -194,7 +196,7 @@ class SiteCloner:
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
-                if normalized in self.visited_urls:
+                if normalized in self.seen_urls:
                     return None
                 
                 logger.info(f"Dynamic fetch: {url}")
@@ -222,6 +224,7 @@ class SiteCloner:
                     html = await page.content()
                     await browser.close()
                     
+                    self.seen_urls.add(normalized)
                     self.visited_urls.add(normalized)
                     return html
                     
@@ -324,9 +327,10 @@ class SiteCloner:
         self.url_map[normalized] = output_path
         
         parsed = urlparse(url)
+        base_domain = parsed.netloc
         soup = BeautifulSoup(html, 'lxml')
         
-        # Rewrite links to work locally
+        # Rewrite links to work locally when the target will be downloaded
         for tag in soup.find_all(['a', 'img', 'link', 'script'], recursive=True):
             # page links
             if tag.name == 'a' and tag.has_attr('href'):
@@ -334,9 +338,10 @@ class SiteCloner:
                 if original and not original.startswith(('javascript:', 'mailto:', 'tel:', '#')):
                     try:
                         absolute = urljoin(url, original)
-                        local_path = self._get_local_html_path(absolute)
-                        rel_path = os.path.relpath(local_path, output_path.parent)
-                        tag['href'] = rel_path
+                        if self._should_follow_link(absolute, base_domain):
+                            local_path = self._get_local_html_path(absolute)
+                            rel_path = os.path.relpath(local_path, output_path.parent)
+                            tag['href'] = rel_path
                     except Exception:
                         pass
 
@@ -346,9 +351,10 @@ class SiteCloner:
                 if original and not original.startswith(('data:', 'javascript:')):
                     try:
                         absolute = urljoin(url, original)
-                        local_path = self._get_asset_path(absolute, 'images')
-                        rel_path = os.path.relpath(local_path, output_path.parent)
-                        tag['src'] = rel_path
+                        if self._should_follow_link(absolute, base_domain):
+                            local_path = self._get_asset_path(absolute, 'images')
+                            rel_path = os.path.relpath(local_path, output_path.parent)
+                            tag['src'] = rel_path
                     except Exception:
                         pass
 
@@ -358,9 +364,10 @@ class SiteCloner:
                 if original and not original.startswith(('javascript:', 'data:')):
                     try:
                         absolute = urljoin(url, original)
-                        local_path = self._get_asset_path(absolute, 'css')
-                        rel_path = os.path.relpath(local_path, output_path.parent)
-                        tag['href'] = rel_path
+                        if self._should_follow_link(absolute, base_domain):
+                            local_path = self._get_asset_path(absolute, 'css')
+                            rel_path = os.path.relpath(local_path, output_path.parent)
+                            tag['href'] = rel_path
                     except Exception:
                         pass
 
@@ -370,9 +377,10 @@ class SiteCloner:
                 if original and not original.startswith(('javascript:', 'data:')):
                     try:
                         absolute = urljoin(url, original)
-                        local_path = self._get_asset_path(absolute, 'js')
-                        rel_path = os.path.relpath(local_path, output_path.parent)
-                        tag['src'] = rel_path
+                        if self._should_follow_link(absolute, base_domain):
+                            local_path = self._get_asset_path(absolute, 'js')
+                            rel_path = os.path.relpath(local_path, output_path.parent)
+                            tag['src'] = rel_path
                     except Exception:
                         pass
         
@@ -488,15 +496,16 @@ class SiteCloner:
             # Extract links for crawling
             if current_depth < self.depth:
                 links = self.extract_links(html, current_url)
-            for link in links:
-                normalized = self._normalize_url(link)
-                if normalized in self.visited_urls:
-                    continue
-                if self._should_follow_link(link, base_domain):
-                    if len(self.visited_urls) >= self.max_pages:
-                        logger.info("Maximum page limit reached, stopping crawl.")
-                        break
-                    queue.append((link, current_depth + 1))
+                for link in links:
+                    normalized = self._normalize_url(link)
+                    if normalized in self.seen_urls:
+                        continue
+                    if self._should_follow_link(link, base_domain):
+                        self.seen_urls.add(normalized)
+                        if len(self.visited_urls) + len(self.seen_urls) >= self.max_pages:
+                            logger.info("Maximum page limit reached, stopping crawl.")
+                            break
+                        queue.append((link, current_depth + 1))
             
             await asyncio.sleep(self.delay)
         

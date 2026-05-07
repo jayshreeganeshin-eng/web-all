@@ -27,6 +27,7 @@ def main():
     clone_p.add_argument("--dynamic", action="store_true", help="Use dynamic rendering")
     clone_p.add_argument("--discover-invisible", action="store_true", help="Discover hidden content")
     clone_p.add_argument("--everything", action="store_true", help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl")
+    clone_p.add_argument("--ai-enabled", action="store_true", help="Enable AI analysis for this clone")
 
     # Images command
     img_p = subparsers.add_parser("images", help="Download all images")
@@ -65,6 +66,8 @@ def _handle_clone(args):
     """Handle clone command."""
     from .core.cloner import SiteCloner
     from .core.invisible import InvisibleContentEngine
+    from .utils.ai_engine import AIEngine
+    from urllib.parse import urlparse
 
     print(f"🚀 Cloning {args.url}...")
 
@@ -96,6 +99,20 @@ def _handle_clone(args):
 
         mode = "dynamic" if args.dynamic else "static"
         await cloner.clone_site(args.url, mode=mode)
+
+        if args.ai_enabled:
+            try:
+                ai_engine = AIEngine({"enabled": True, "provider": "ollama", "base_url": "http://localhost:11434"})
+                parsed = urlparse(args.url)
+                index_html = Path(args.output) / parsed.netloc.replace('.', '_') / "index.html"
+                if index_html.exists():
+                    html = index_html.read_text(encoding='utf-8')
+                    await ai_engine.analyze_and_enhance(html, args.url, index_html.parent)
+                    print("✅ AI analysis complete!")
+                else:
+                    print("⚠️ index.html not found in clone output; skipping AI analysis.")
+            except Exception as e:
+                print(f"⚠️ AI analysis failed: {e}")
 
     asyncio.run(run())
     print(f"✅ Clone complete! Output: {args.output}")

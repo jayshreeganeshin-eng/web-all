@@ -97,6 +97,11 @@ web-all clone https://example.com -o mysite --everything
 ```
 This enables dynamic rendering, hidden content discovery, a deeper site crawl, entire domain/subdomains capture, and automatically enables AI analysis when AI is configured.
 
+#### Enable AI analysis manually from CLI:
+```bash
+web-all clone https://example.com -o mysite --ai-enabled
+```
+
 #### Clone through Tor (for .onion sites):
 ```bash
 web-all clone http://example.onion -o onion_site --tor
