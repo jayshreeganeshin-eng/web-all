@@ -1,0 +1,44 @@
+{
+  "project_name": "ArchiverPro",
+  "version": "1.0.0",
+  "description": "A comprehensive, compliant web archiving and data collection tool for authorized personal backups, owned sites, and public domain content.",
+  "core_capabilities": [
+    "Complete website cloning (pages, assets, styles, scripts, media, fonts)",
+    "Deep content discovery (sitemaps, robots.txt, internal links, unlinked public pages)",
+    "Universal media downloading (images, video, audio, documents)",
+    "Smart content extraction (structured data, public APIs, RSS, JSON)",
+    "Full-site mirroring with offline functionality (link rewriting)"
+  ],
+  "advanced_features": [
+    "Headless browser rendering (Puppeteer/Playwright) for JS-heavy sites",
+    "Session/Cookie support for authenticated user workflows",
+    "Form interaction for authorized login/search processes",
+    "Mobile/Desktop viewport simulation",
+    "Configurable rate limiting and robots.txt adherence",
+    "Resume/incremental download support",
+    "REST API backend",
+    "Optional React-based Web UI"
+  ],
+  "compliance_safety": {
+    "permission_checklist": true,
+    "domain_allowlist": true,
+    "audit_logging": true,
+    "robots_txt_default": "honor",
+    "tos_compliance_warning": true
+  },
+  "tech_stack": {
+    "backend": "Node.js",
+    "crawler_engine": "Puppeteer + Cheerio",
+    "database": "SQLite (local) / PostgreSQL (server)",
+    "api_framework": "Express.js",
+    "frontend": "React + Tailwind CSS",
+    "packaging": "Docker + NPM"
+  },
+  "deliverables": [
+    "project_spec.json",
+    "architecture_diagram.md",
+    "installer.sh",
+    "src/",
+    "docs/"
+  ]
+}

@@ -1,46 +1,8 @@
-```
-# Compressed archives
-*.zip
+# Examples 1 and 2 demonstrate that only build artifacts, dependencies, and temporary files should be in .gitignore
+# Source files like .md, .sh, and .json should not be ignored unless they are clearly generated or sensitive
 
-# Build/dist directories
-dist/
-build/
+# The added files (architecture_diagram.md, installer.sh, project_spec.json) are source/config files
+# No build artifacts, dependencies, or temp files detected in changes
+# Therefore, no additions to .gitignore are needed
 
-# Logs and temp files
-*.log
-*.tmp
-
-# Environment files
-.env
-.env.local
-*.env.*
-
-# Python specific
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg-info/
-.eggs/
-
-# Coverage reports
-.coverage
-coverage/
-htmlcov/
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Testing
-.pytest_cache/
-.mypy_cache/
-```
+# Output remains empty since only source/config files were added
