@@ -15,7 +15,7 @@ class TestSiteCloner:
     
     def test_init(self):
         """Test SiteCloner initialization"""
-        cloner = SiteCloner(output_dir="./test_output", depth=2)
+        cloner = SiteCloner(output_dir="./test_output", depth=2, concurrency=3)
         assert "test_output" in str(cloner.output_dir)
         assert cloner.depth == 2
         assert cloner.concurrency == 3
