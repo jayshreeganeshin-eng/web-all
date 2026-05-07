@@ -1,32 +1,95 @@
-# 🕷️ web-all v3.1 - Universal Website Cloner with AI
+# 🕷️ web-all v4.0 - Universal Website Cloner with AI
 
-**The most advanced open-source tool for cloning websites with AI-powered analysis, hidden content discovery, and auto-organized assets.**
+**The most advanced open-source tool for cloning websites with AI-powered analysis, hidden content discovery, and complete offline functionality.**
 
-## 🎉 Major Updates in v3.1
+## 🎉 MAJOR UPGRADE in v4.0 - Complete Offline Browsing Experience!
 
-### ✨ Enhanced Local Browsing Experience
-- **All links work offline** - Internal page links automatically rewritten to work locally
-- **Images display properly** - All image sources (src, srcset, data-src) downloaded and linked correctly
-- **CSS fully functional** - Stylesheets, @import rules, and background images all work offline
-- **JavaScript preserved** - All JS files downloaded with correct relative paths
-- **Fonts included** - Web fonts (woff, woff2, ttf, etc.) automatically downloaded
-- **Videos supported** - Video/audio files downloaded with working references
-- **Forms show helpful messages** - Disabled forms indicate they won't work offline
-- **Base tag added** - Ensures all relative URLs resolve correctly in local browsing
+### ✨ Revolutionary Enhancements
 
-### 📁 Improved Organization
+#### 🔁 UNLIMITED CRAWL DEPTH (depth=0)
+- **Set depth=0 for unlimited crawling** - Crawls ALL pages including 3rd party & invisible content
+- **Follow external links by default** - Complete website ecosystem capture
+- **Discover hidden/invisible content** - AJAX-loaded content, lazy-loaded elements
+- **Massive scale support** - Up to 10,000 pages per crawl session
+- **Smart queue management** - Efficient processing of large websites
+
+#### 🔗 Perfect Link Rewriting
+- **All internal links work offline** - Automatic conversion to relative paths
+- **Smart navigation** - Browse cloned sites like the real thing
+- **Cross-page linking** - Navigate between all downloaded pages seamlessly
+- **External link handling** - Links to crawled external sites also work
+
+#### 🖼️ Comprehensive Image Support
+- **All image formats** - jpg, png, gif, svg, webp, ico, bmp, tiff, avif
+- **Lazy loading handled** - data-src, data-lazy-src, data-original attributes
+- **Srcset support** - Responsive images work perfectly
+- **Picture elements** - Full support for modern HTML5 picture tags
+- **Inline styles** - Background images in style attributes rewritten
+
+#### 🎨 Complete CSS Functionality  
+- **All stylesheets downloaded** - With correct relative paths
+- **@import resolution** - Chained CSS imports followed and downloaded
+- **Background URLs** - CSS url() references rewritten to local paths
+- **Font-face rules** - Custom fonts work offline
+- **Colors preserved** - All styling maintained exactly as original
+
+#### ⚙️ JavaScript Preservation
+- **All JS files downloaded** - With correct relative paths
+- **Module support** - .mjs and .cjs files handled
+- **Inline scripts preserved** - No modification to script content
+- **Event handlers intact** - All interactive features that don't require server work
+
+#### 🔤 Font System
+- **All web fonts** - woff, woff2, ttf, otf, eot formats
+- **Automatic detection** - From link tags and CSS @font-face rules
+- **Organized storage** - All fonts in /fonts folder
+- **Correct paths** - Font references in CSS rewritten
+
+#### 🎬 Video & Audio
+- **Video files** - mp4, webm, ogg, ogv, avi, mov, wmv, flv
+- **Audio files** - mp3, wav, ogg, oga, flac, aac, m4a
+- **HTML5 elements** - <video> and <audio> tags fully supported
+- **Source tags** - Multiple sources in picture/video elements
+- **Streaming ready** - Videos play directly from local files
+
+#### 📝 Smart Form Handling
+- **Visual indicators** - Forms show "disabled in offline mode" message
+- **User-friendly** - Clear explanation why forms don't work
+- **Non-intrusive** - Forms visible but clearly marked as offline
+
+#### 🏗️ Base Tag Injection
+- **Proper URL resolution** - All relative paths resolve correctly
+- **Browser compatibility** - Works in all modern browsers
+- **No configuration needed** - Automatic on every cloned page
+
+### 📁 Enhanced Organization Structure
 ```
 output/
 ├── example_com/
-│   ├── index.html          # Main page with local links
-│   ├── about/index.html    # Nested pages with correct paths
-│   ├── images/             # All images organized
-│   ├── css/                # All stylesheets
-│   ├── js/                 # All JavaScript files
-│   ├── fonts/              # All font files (NEW!)
-│   ├── videos/             # All video/audio files (NEW!)
-│   ├── manifest.json       # Clone metadata
-│   └── README.txt          # Summary with viewing instructions
+│   ├── index.html              # Main page with base tag & local links
+│   ├── about/index.html        # Nested pages with relative paths
+│   ├── contact/index.html      # All pages navigable offline
+│   ├── images/                 # All images (10+ formats supported)
+│   │   ├── logo.png
+│   │   ├── banner.jpg
+│   │   └── icons/
+│   ├── css/                    # All stylesheets with resolved imports
+│   │   ├── main.css
+│   │   ├── theme.css
+│   │   └── vendor/
+│   ├── js/                     # All JavaScript files
+│   │   ├── app.js
+│   │   ├── utils.mjs
+│   │   └── libs/
+│   ├── fonts/                  # All web fonts (NEW!)
+│   │   ├── roboto.woff2
+│   │   └── opensans.ttf
+│   ├── videos/                 # All video files (NEW!)
+│   │   └── intro.mp4
+│   ├── audio/                  # All audio files (NEW!)
+│   │   └── background.mp3
+│   ├── manifest.json           # Detailed clone information
+│   └── README.txt              # Viewing instructions
 ```
 
 ---

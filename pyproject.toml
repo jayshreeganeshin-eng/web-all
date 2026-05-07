@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "web-all"
-version = "3.0.0"
-description = "Universal Website Cloner with AI - Clone websites, discover hidden content, auto-organize assets"
+version = "5.0.0"
+description = "PRODUCTION-READY Universal Website Cloner with AI - Enterprise-grade cloning with progress tracking, ETA estimation, and complete offline browsing"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [{name = "web-all Team", email = "team@web-all.dev"}]
-keywords = ["website", "cloner", "crawler", "scraper", "downloader", "archive", "mirror", "ai"]
+keywords = ["website", "cloner", "crawler", "scraper", "downloader", "archive", "mirror", "ai", "production", "enterprise"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",

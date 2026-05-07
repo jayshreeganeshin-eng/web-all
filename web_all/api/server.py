@@ -198,7 +198,7 @@ async def create_clone_job(request: CloneRequest, background_tasks: BackgroundTa
 
 @app.get("/api/v1/jobs/{job_id}")
 async def get_job_status(job_id: str):
-    """Get status of a cloning job."""
+    """Get status of a cloning job with detailed progress."""
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     
@@ -221,6 +221,16 @@ async def get_job_status(job_id: str):
     
     if "error" in job:
         response["error"] = job["error"]
+    
+    # Add progress tracking information
+    if "progress" in job:
+        response["progress"] = job["progress"]
+    
+    if "estimated_time" in job:
+        response["estimated_time"] = job["estimated_time"]
+    
+    if "asset_counts" in job:
+        response["asset_counts"] = job["asset_counts"]
     
     if job["status"] == "completed" and "output_path" in job:
         response["download_url"] = f"/api/v1/download/{job_id}"
