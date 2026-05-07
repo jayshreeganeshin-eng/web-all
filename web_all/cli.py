@@ -28,6 +28,14 @@ def main():
     clone_p.add_argument("--discover-invisible", action="store_true", help="Discover hidden content")
     clone_p.add_argument("--everything", action="store_true", help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl")
     clone_p.add_argument("--ai-enabled", action="store_true", help="Enable AI analysis for this clone")
+    clone_p.add_argument("--web-god", action="store_true", help="🌟 WEB GOD MODE: Enable all optimizations in one click (SEO, sitemap, schema, accessibility, social cards)")
+    clone_p.add_argument("--auto-seo", action="store_true", help="Enable automatic SEO optimization")
+    clone_p.add_argument("--generate-sitemap", action="store_true", help="Generate XML sitemap")
+    clone_p.add_argument("--schema-markup", action="store_true", help="Add Schema.org structured data")
+    clone_p.add_argument("--meta-enhancement", action="store_true", help="Enhance meta tags")
+    clone_p.add_argument("--accessibility", action="store_true", help="Improve accessibility features")
+    clone_p.add_argument("--social-cards", action="store_true", help="Add Open Graph & Twitter Cards")
+    clone_p.add_argument("--mobile-check", action="store_true", help="Check mobile responsiveness")
 
     # Images command
     img_p = subparsers.add_parser("images", help="Download all images")
@@ -70,13 +78,29 @@ def _handle_clone(args):
     from urllib.parse import urlparse
 
     print(f"🚀 Cloning {args.url}...")
+    
+    # Web God mode enables everything
+    web_god_mode = getattr(args, 'web_god', False)
+    auto_seo = getattr(args, 'auto_seo', False) or web_god_mode
+    
+    if web_god_mode:
+        print("🌟 WEB GOD MODE ACTIVATED! 🌟")
+        print("   Enabling all optimizations: SEO, sitemap, schema markup, accessibility, social cards...")
 
     cloner = SiteCloner(
         output_dir=args.output,
         depth=args.depth,
         concurrency=args.concurrency,
         delay=args.delay,
-        use_tor=args.tor
+        use_tor=args.tor,
+        web_god_mode=web_god_mode,
+        auto_seo_enabled=auto_seo,
+        generate_sitemap=getattr(args, 'generate_sitemap', False) or web_god_mode,
+        schema_markup=getattr(args, 'schema_markup', False) or web_god_mode,
+        meta_tags_enhancement=getattr(args, 'meta_enhancement', False) or web_god_mode,
+        accessibility_check=getattr(args, 'accessibility', False) or web_god_mode,
+        social_media_cards=getattr(args, 'social_cards', False) or web_god_mode,
+        mobile_responsive_check=getattr(args, 'mobile_check', False) or web_god_mode
     )
 
     async def run():
