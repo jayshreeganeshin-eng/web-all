@@ -19,7 +19,7 @@ def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="web-all",
-        description="Universal Website Cloner - Download visible and invisible content"
+        description="Universal Website Cloner - Download visible and invisible content",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -28,30 +28,51 @@ def main():
     clone_p = subparsers.add_parser("clone", help="Full website clone with assets")
     clone_p.add_argument("url", help="Target website URL")
     clone_p.add_argument("-o", "--output", default="./output", help="Output directory")
-    clone_p.add_argument("-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)")
+    clone_p.add_argument(
+        "-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)"
+    )
     clone_p.add_argument("-c", "--concurrency", type=int, default=5, help="Concurrent requests")
     clone_p.add_argument("--delay", type=float, default=0.5, help="Delay between requests")
     clone_p.add_argument("--tor", action="store_true", help="Use Tor proxy")
     clone_p.add_argument("--dynamic", action="store_true", help="Use dynamic rendering")
-    clone_p.add_argument("--discover-invisible", action="store_true", help="Discover hidden content")
-    clone_p.add_argument("--everything", action="store_true", help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl")
-    clone_p.add_argument("--ai-enabled", action="store_true", help="Enable AI analysis for this clone")
-    clone_p.add_argument("--ai-provider", choices=["openrouter", "groq", "huggingface", "nvidia", "ollama"], default="ollama", help="AI provider to use")
+    clone_p.add_argument(
+        "--discover-invisible", action="store_true", help="Discover hidden content"
+    )
+    clone_p.add_argument(
+        "--everything",
+        action="store_true",
+        help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl",
+    )
+    clone_p.add_argument(
+        "--ai-enabled", action="store_true", help="Enable AI analysis for this clone"
+    )
+    clone_p.add_argument(
+        "--ai-provider",
+        choices=["openrouter", "groq", "huggingface", "nvidia", "ollama"],
+        default="ollama",
+        help="AI provider to use",
+    )
     clone_p.add_argument("--ai-key", help="API key for AI provider (not needed for ollama)")
     clone_p.add_argument("--ai-model", help="Specific model to use (optional)")
-    clone_p.add_argument("--max-pages", type=int, default=1000, help="Maximum number of pages to crawl")
+    clone_p.add_argument(
+        "--max-pages", type=int, default=1000, help="Maximum number of pages to crawl"
+    )
 
     # Images command
     img_p = subparsers.add_parser("images", help="Download all images")
     img_p.add_argument("url", help="Target website URL")
     img_p.add_argument("-o", "--output", default="./output/images", help="Output directory")
-    img_p.add_argument("-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)")
+    img_p.add_argument(
+        "-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)"
+    )
 
     # Text command
     txt_p = subparsers.add_parser("text", help="Extract text from pages")
     txt_p.add_argument("url", help="Target website URL")
     txt_p.add_argument("-o", "--output", default="./output/text", help="Output directory")
-    txt_p.add_argument("-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)")
+    txt_p.add_argument(
+        "-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)"
+    )
 
     # Serve command (GUI + API)
     serve_p = subparsers.add_parser("serve", help="Start web GUI server")
@@ -76,10 +97,11 @@ def main():
 
 def _handle_clone(args):
     """Handle clone command."""
+    from urllib.parse import urlparse
+
     from .core.cloner import SiteCloner
     from .core.invisible import InvisibleContentEngine
     from .utils.ai_engine import AIEngine
-    from urllib.parse import urlparse
 
     try:
         _validate_url(args.url)
@@ -99,12 +121,15 @@ def _handle_clone(args):
         concurrency=args.concurrency,
         delay=args.delay,
         use_tor=args.tor,
-        max_pages=args.max_pages
+        max_pages=args.max_pages,
     )
 
     async def run():
         if args.everything:
-            print("⚡ Running full everything capture: dynamic rendering, hidden content discovery, deeper crawl, and AI analysis")
+            print(
+                "⚡ Running full capture: dynamic rendering, hidden content, "
+                "deeper crawl, and AI analysis"
+            )
             args.dynamic = True
             args.discover_invisible = True
             args.ai_enabled = True
@@ -128,35 +153,40 @@ def _handle_clone(args):
                 ai_config = {
                     "enabled": True,
                     "provider": args.ai_provider,
-                    "base_url": "http://localhost:11434" if args.ai_provider == "ollama" else None
+                    "base_url": "http://localhost:11434" if args.ai_provider == "ollama" else None,
                 }
-                
+
                 # Add API key if provided or required
                 if args.ai_key:
                     ai_config["api_key"] = args.ai_key
                 elif args.ai_provider in ["openrouter", "groq", "huggingface", "nvidia"]:
                     # Try to get from environment
                     import os
+
                     env_key_map = {
                         "openrouter": "OPENROUTER_API_KEY",
                         "groq": "GROQ_API_KEY",
                         "huggingface": "HUGGINGFACE_API_KEY",
-                        "nvidia": "NVIDIA_API_KEY"
+                        "nvidia": "NVIDIA_API_KEY",
                     }
                     env_key = os.environ.get(env_key_map.get(args.ai_provider, ""))
                     if env_key:
                         ai_config["api_key"] = env_key
                     else:
-                        print(f"⚠️ No API key provided for {args.ai_provider}. Set --ai-key or {env_key_map.get(args.ai_provider, '')} env var.")
-                
+                        msg = (
+                            f"⚠️ No API key for {args.ai_provider}. "
+                            f"Set --ai-key or {env_key_map.get(args.ai_provider, '')} env var."
+                        )
+                        print(msg)
+
                 if args.ai_model:
                     ai_config["model"] = args.ai_model
-                
+
                 ai_engine = AIEngine(ai_config)
                 parsed = urlparse(args.url)
-                index_html = Path(args.output) / parsed.netloc.replace('.', '_') / "index.html"
+                index_html = Path(args.output) / parsed.netloc.replace(".", "_") / "index.html"
                 if index_html.exists():
-                    html = index_html.read_text(encoding='utf-8')
+                    html = index_html.read_text(encoding="utf-8")
                     await ai_engine.analyze_and_enhance(html, args.url, index_html.parent)
                     print(f"✅ AI analysis complete with {args.ai_provider}!")
                 else:
@@ -170,9 +200,10 @@ def _handle_clone(args):
 
 def _handle_images(args):
     """Handle images command."""
-    from .core.cloner import SiteCloner
-    from bs4 import BeautifulSoup
     import aiohttp
+    from bs4 import BeautifulSoup
+
+    from .core.cloner import SiteCloner
 
     print(f"📸 Downloading images from {args.url}...")
 
@@ -210,9 +241,11 @@ def _handle_images(args):
 
 def _handle_text(args):
     """Handle text command."""
-    from .core.cloner import SiteCloner
-    from bs4 import BeautifulSoup
     from urllib.parse import urlparse
+
+    from bs4 import BeautifulSoup
+
+    from .core.cloner import SiteCloner
 
     print(f"📝 Extracting text from {args.url}...")
 
@@ -244,8 +277,9 @@ def _handle_text(args):
 
 def _handle_serve(args):
     """Handle serve command."""
-    from .api.server import start_api
     from pathlib import Path
+
+    from .api.server import start_api
 
     gui_dir = None if args.no_gui else str(Path(__file__).parent / "gui")
     print(f"🌐 Starting web-all server on http://{args.host}:{args.port}")
