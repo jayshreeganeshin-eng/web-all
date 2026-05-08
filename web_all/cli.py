@@ -127,7 +127,8 @@ def _handle_clone(args):
     async def run():
         if args.everything:
             print(
-                "⚡ Running full everything capture: dynamic rendering, hidden content discovery, deeper crawl, and AI analysis"
+                "⚡ Running full capture: dynamic rendering, hidden content, "
+                "deeper crawl, and AI analysis"
             )
             args.dynamic = True
             args.discover_invisible = True
@@ -172,9 +173,11 @@ def _handle_clone(args):
                     if env_key:
                         ai_config["api_key"] = env_key
                     else:
-                        print(
-                            f"⚠️ No API key provided for {args.ai_provider}. Set --ai-key or {env_key_map.get(args.ai_provider, '')} env var."
+                        msg = (
+                            f"⚠️ No API key for {args.ai_provider}. "
+                            f"Set --ai-key or {env_key_map.get(args.ai_provider, '')} env var."
                         )
+                        print(msg)
 
                 if args.ai_model:
                     ai_config["model"] = args.ai_model

@@ -100,9 +100,10 @@ class InvisibleContentEngine:
                         await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
 
                         # Check if we reached bottom
-                        reached_bottom = await page.evaluate("""
-                            () => window.innerHeight + window.scrollY >= document.body.offsetHeight - 100
-                        """)
+                        reached_bottom = await page.evaluate(
+                            "() => window.innerHeight + window.scrollY "
+                            ">= document.body.offsetHeight - 100"
+                        )
 
                         if reached_bottom:
                             logger.info(f"Reached bottom after {i + 1} scrolls")

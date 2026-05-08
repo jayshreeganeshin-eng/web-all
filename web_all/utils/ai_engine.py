@@ -299,7 +299,10 @@ Content:
         try:
             return await self.provider.generate(
                 prompt,
-                system_prompt="You are a web content analyzer. Provide clear, structured summaries.",
+                system_prompt=(
+                    "You are a web content analyzer. "
+                    "Provide clear, structured summaries."
+                ),
             )
         except Exception as e:
             print(f"AI summarization failed: {e}")
@@ -378,16 +381,25 @@ Return only comma-separated tags, no explanations."""
             # Fallback: simple heuristic removal
             import re
 
-            text = re.sub(r"<nav[^>]*>.*?</nav>", "", html_content, flags=re.DOTALL | re.IGNORECASE)
-            text = re.sub(r"<footer[^>]*>.*?</footer>", "", text, flags=re.DOTALL | re.IGNORECASE)
-            text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE)
-            text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
+            text = re.sub(
+                r"<nav[^>]*>.*?</nav>", "", html_content, flags=re.DOTALL | re.IGNORECASE
+            )
+            text = re.sub(
+                r"<footer[^>]*>.*?</footer>", "", text, flags=re.DOTALL | re.IGNORECASE
+            )
+            text = re.sub(
+                r"<script[^>]*>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE
+            )
+            text = re.sub(
+                r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE
+            )
             return text
 
-        prompt = f"""Clean this HTML by removing navigation menus, advertisements, footers, and other non-content elements. Keep only the main article/content. Return clean HTML.
-
-HTML:
-{html_content[:3000]}"""
+        prompt = (
+            f"Clean this HTML by removing navigation menus, advertisements, "
+            f"footers, and other non-content elements. Keep only the main "
+            f"article/content. Return clean HTML.\n\nHTML:\n{html_content[:3000]}"
+        )
 
         try:
             return await self.provider.generate(
@@ -454,6 +466,10 @@ HTML:
                     f.write(f"## Tags\n{', '.join(results['tags'])}\n\n")
                     if results["structured_data"]:
                         f.write(
+                            f"## Structured Data\n```json\n"
+                            f"{json.dumps(results['structured_data'], indent=2)}\n"
+                            f"```\n"
+                        )
                             f"## Structured Data\n```json\n{json.dumps(results['structured_data'], indent=2)}\n```\n"
                         )
 

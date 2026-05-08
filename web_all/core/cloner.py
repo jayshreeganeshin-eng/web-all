@@ -363,7 +363,8 @@ class SiteCloner:
 
         # JS
         assets["js"] = [
-            urljoin(base_url, script["src"].strip()) for script in soup.find_all("script", src=True)
+            urljoin(base_url, script["src"].strip())
+            for script in soup.find_all("script", src=True)
         ]
 
         return assets
