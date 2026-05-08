@@ -95,7 +95,12 @@ class SiteCloner:
         self.session.mount("https://", adapter)
         
         if use_tor:
-            self._setup_tor_proxy()
+            # Only setup Tor proxy if actually needed (for .onion sites)
+            parsed = urlparse(start_url) if 'start_url' in locals() else None
+            if parsed and parsed.netloc.endswith('.onion'):
+                self._setup_tor_proxy()
+            elif use_tor:
+                logger.warning("Tor enabled but URL is not .onion - Tor proxy will not be used")
         
         self.semaphore = asyncio.Semaphore(concurrency)
         self.stats = {

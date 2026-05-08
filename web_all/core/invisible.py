@@ -239,7 +239,10 @@ class InvisibleContentEngine:
                 submitted = await self._submit_form(page, submit_selector, input_values)
                 
                 if submitted:
-                    await page.wait_for_load_state("networkidle")
+                    try:
+                        await page.wait_for_load_state("networkidle", timeout=min(self.timeout, 10000))
+                    except Exception:
+                        logger.info("Network idle timeout after form submission, continuing with current state")
                 
                 html = await page.content()
                 return html
