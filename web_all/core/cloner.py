@@ -16,12 +16,12 @@ from pathlib import Path
 from datetime import datetime
 
 try:
-    import requests
+    import aiohttp
     from bs4 import BeautifulSoup
     from playwright.async_api import async_playwright
 except ImportError as e:
     print(f"Missing dependency: {e}")
-    print("Run: pip install requests beautifulsoup4 playwright")
+    print("Run: pip install aiohttp beautifulsoup4 playwright")
     raise
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -63,8 +63,7 @@ class SiteCloner:
         self.seen_urls: Set[str] = set()
         self.downloaded_assets: Set[str] = set()
         self.url_map: Dict[str, Path] = {}
-        self.session = requests.Session()
-        self.session.headers.update({"User-Agent": self.user_agent})
+        self._http_session: Optional[aiohttp.ClientSession] = None
         self.follow_external = False
         self.include_subdomains = True
         self.max_pages = 1000
@@ -83,12 +82,10 @@ class SiteCloner:
         }
         
     def _setup_tor_proxy(self):
-        """Configure session to use Tor proxy."""
-        proxies = {
-            "http": self.tor_proxy,
-            "https": self.tor_proxy
+        """Configure Tor proxy settings for aiohttp."""
+        self.tor_proxy_config = {
+            "proxy": self.tor_proxy
         }
-        self.session.proxies.update(proxies)
         logger.info(f"Tor proxy enabled: {self.tor_proxy}")
         
     def _normalize_url(self, url: str) -> str:
@@ -163,8 +160,32 @@ class SiteCloner:
         
         return output_path
     
+    async def _get_http_session(self) -> aiohttp.ClientSession:
+        """Get or create aiohttp session with connection pooling."""
+        if self._http_session is None or self._http_session.closed:
+            headers = {"User-Agent": self.user_agent}
+            connector = aiohttp.TCPConnector(limit=self.concurrency, ttl_dns_cache=300)
+            
+            if self.use_tor:
+                self._http_session = aiohttp.ClientSession(
+                    headers=headers,
+                    connector=connector,
+                    proxy=self.tor_proxy
+                )
+            else:
+                self._http_session = aiohttp.ClientSession(
+                    headers=headers,
+                    connector=connector
+                )
+        return self._http_session
+    
+    async def close(self):
+        """Close the HTTP session."""
+        if self._http_session and not self._http_session.closed:
+            await self._http_session.close()
+    
     async def fetch_page(self, url: str) -> Optional[str]:
-        """Fetch page content with retry logic."""
+        """Fetch page content with retry logic using async HTTP."""
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
@@ -173,20 +194,17 @@ class SiteCloner:
                     
                 logger.info(f"Fetching: {url}")
                 
-                loop = asyncio.get_event_loop()
-                response = await loop.run_in_executor(
-                    None, 
-                    lambda: self.session.get(url, timeout=self.timeout)
-                )
-                
-                if response.status_code == 200:
-                    self.seen_urls.add(normalized)
-                    self.visited_urls.add(normalized)
-                    return response.text
-                else:
-                    logger.warning(f"Failed to fetch {url}: {response.status_code}")
-                    return None
-                    
+                session = await self._get_http_session()
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=self.timeout)) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        self.seen_urls.add(normalized)
+                        self.visited_urls.add(normalized)
+                        return html
+                    else:
+                        logger.warning(f"Failed to fetch {url}: {response.status_code}")
+                        return None
+                        
             except Exception as e:
                 logger.error(f"Error fetching {url}: {e}")
                 return None
@@ -392,36 +410,38 @@ class SiteCloner:
         
         logger.info(f"Saved: {output_path}")
     
-    def save_asset(self, url: str, asset_type: str):
-        """Download and save asset with organized folder structure."""
+    async def save_asset(self, url: str, asset_type: str):
+        """Download and save asset with organized folder structure using async HTTP."""
         try:
             normalized = self._normalize_url(url)
             if normalized in self.downloaded_assets:
                 return
             
-            response = self.session.get(url, timeout=self.timeout)
-            if response.status_code == 200:
-                output_path = self._get_asset_path(url, asset_type)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                with open(output_path, 'wb') as f:
-                    f.write(response.content)
-                
-                self.downloaded_assets.add(normalized)
-                self.url_map[normalized] = output_path
-                
-                # Update stats
-                if asset_type == 'images':
-                    self.stats['images'] += 1
-                elif asset_type == 'css':
-                    self.stats['css'] += 1
-                elif asset_type == 'js':
-                    self.stats['js'] += 1
-                else:
-                    self.stats['other'] += 1
-                
-                logger.info(f"Downloaded {asset_type}: {output_path.name}")
-                
+            session = await self._get_http_session()
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=self.timeout)) as response:
+                if response.status == 200:
+                    content = await response.read()
+                    output_path = self._get_asset_path(url, asset_type)
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    with open(output_path, 'wb') as f:
+                        f.write(content)
+                    
+                    self.downloaded_assets.add(normalized)
+                    self.url_map[normalized] = output_path
+                    
+                    # Update stats
+                    if asset_type == 'images':
+                        self.stats['images'] += 1
+                    elif asset_type == 'css':
+                        self.stats['css'] += 1
+                    elif asset_type == 'js':
+                        self.stats['js'] += 1
+                    else:
+                        self.stats['other'] += 1
+                    
+                    logger.info(f"Downloaded {asset_type}: {output_path.name}")
+                    
         except Exception as e:
             self.stats['errors'] += 1
             logger.error(f"Failed to download asset {url}: {e}")
@@ -490,12 +510,17 @@ class SiteCloner:
             output_file = self._get_local_html_path(current_url)
             self.save_html(html, current_url, output_file)
             
-            # Extract and download ALL assets by default
+            # Extract and download ALL assets by default with concurrency
             if self.download_all_assets:
                 assets = self.extract_assets(html, current_url)
+                download_tasks = []
                 for asset_type, urls in assets.items():
                     for asset_url in urls:  # No limit - download all
-                        self.save_asset(asset_url, asset_type)
+                        download_tasks.append(self.save_asset(asset_url, asset_type))
+                
+                # Download assets concurrently (limited by semaphore)
+                if download_tasks:
+                    await asyncio.gather(*download_tasks, return_exceptions=True)
             
             # Extract links for crawling
             if current_depth < effective_depth:
@@ -554,5 +579,8 @@ class SiteCloner:
         logger.info(f"   📦 Total assets: {len(self.downloaded_assets)}")
         logger.info(f"   ❌ Errors: {self.stats['errors']}")
         logger.info(f"   📁 Output: {domain_dir}")
+        
+        # Cleanup HTTP session
+        await self.close()
         
         return manifest

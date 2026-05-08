@@ -100,11 +100,17 @@ class TestSiteCloner:
     @pytest.mark.asyncio
     async def test_fetch_page_success(self, cloner):
         """Test successful page fetch."""
-        with patch.object(cloner.session, 'get') as mock_get:
+        with patch.object(cloner, '_get_http_session') as mock_get_session:
+            mock_session = MagicMock()
             mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.text = "<html><body>Test</body></html>"
-            mock_get.return_value = mock_response
+            mock_response.status = 200
+            
+            async def mock_text():
+                return "<html><body>Test</body></html>"
+            
+            mock_response.text = mock_text
+            mock_session.get.return_value.__aenter__.return_value = mock_response
+            mock_get_session.return_value = mock_session
             
             html = await cloner.fetch_page("https://example.com")
             
@@ -114,10 +120,12 @@ class TestSiteCloner:
     @pytest.mark.asyncio
     async def test_fetch_page_failure(self, cloner):
         """Test page fetch failure."""
-        with patch.object(cloner.session, 'get') as mock_get:
+        with patch.object(cloner, '_get_http_session') as mock_get_session:
+            mock_session = MagicMock()
             mock_response = MagicMock()
-            mock_response.status_code = 404
-            mock_get.return_value = mock_response
+            mock_response.status = 404
+            mock_session.get.return_value.__aenter__.return_value = mock_response
+            mock_get_session.return_value = mock_session
             
             html = await cloner.fetch_page("https://example.com/notfound")
             
@@ -491,12 +499,18 @@ class TestPerformance:
             depth=0
         )
         
-        # Mock the session to avoid actual network calls
-        with patch.object(cloner.session, 'get') as mock_get:
+        # Mock the HTTP session to avoid actual network calls
+        with patch.object(cloner, '_get_http_session') as mock_get_session:
+            mock_session = MagicMock()
+            
+            async def mock_text():
+                return "<html><body>Test</body></html>"
+            
             mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.text = "<html><body>Test</body></html>"
-            mock_get.return_value = mock_response
+            mock_response.status = 200
+            mock_response.text = mock_text
+            mock_session.get.return_value.__aenter__.return_value = mock_response
+            mock_get_session.return_value = mock_session
             
             import time
             start = time.time()
