@@ -80,13 +80,13 @@ web-all clone https://example.com -o mysite -d 5 -c 10
 ```
 - `-d 5`: Crawl 5 levels deep
 - `-c 10`: Use 10 concurrent connections
-- `-d 0`: Crawl ALL pages from domain (unlimited depth, limited by max_pages)
+- `-d 0`: Crawl all pages in the domain (unlimited depth, bounded by `--max-pages`)
 
-#### Clone entire domain (all pages):
+#### Control page crawl size:
 ```bash
-web-all clone https://example.com -o mysite -d 0
+web-all clone https://example.com -o mysite --max-pages 500
 ```
-This will crawl all discoverable pages within the domain (up to max_pages limit).
+This limits the number of pages crawled for large sites.
 
 #### Discover hidden content:
 ```bash

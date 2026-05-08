@@ -5,6 +5,14 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
+
+
+def _validate_url(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError("Invalid URL. Use a valid http:// or https:// address.")
+    return url
 
 
 def main():
@@ -28,6 +36,7 @@ def main():
     clone_p.add_argument("--discover-invisible", action="store_true", help="Discover hidden content")
     clone_p.add_argument("--everything", action="store_true", help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl")
     clone_p.add_argument("--ai-enabled", action="store_true", help="Enable AI analysis for this clone")
+    clone_p.add_argument("--max-pages", type=int, default=1000, help="Maximum number of pages to crawl")
 
     # Images command
     img_p = subparsers.add_parser("images", help="Download all images")
@@ -69,6 +78,16 @@ def _handle_clone(args):
     from .utils.ai_engine import AIEngine
     from urllib.parse import urlparse
 
+    try:
+        _validate_url(args.url)
+    except ValueError as exc:
+        print(f"❌ {exc}")
+        sys.exit(1)
+
+    if args.max_pages < 1:
+        print("❌ --max-pages must be at least 1")
+        sys.exit(1)
+
     print(f"🚀 Cloning {args.url}...")
 
     cloner = SiteCloner(
@@ -76,7 +95,8 @@ def _handle_clone(args):
         depth=args.depth,
         concurrency=args.concurrency,
         delay=args.delay,
-        use_tor=args.tor
+        use_tor=args.tor,
+        max_pages=args.max_pages
     )
 
     async def run():

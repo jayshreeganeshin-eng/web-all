@@ -15,6 +15,9 @@ from typing import Set, List, Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime
 
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 try:
     import requests
     from bs4 import BeautifulSoup
@@ -55,7 +58,8 @@ class SiteCloner:
         respect_robots: bool = False,
         auto_organize: bool = True,
         download_all_assets: bool = True,
-        save_metadata: bool = True
+        save_metadata: bool = True,
+        max_pages: int = MAX_PAGES
     ):
         self.output_dir = Path(output_dir)
         self.depth = depth
@@ -78,7 +82,17 @@ class SiteCloner:
         self.session.headers.update({"User-Agent": self.user_agent})
         self.follow_external = False
         self.include_subdomains = True
-        self.max_pages = MAX_PAGES
+        self.max_pages = max_pages
+
+        retry_strategy = Retry(
+            total=3,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "OPTIONS"],
+            backoff_factor=0.5,
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
         
         if use_tor:
             self._setup_tor_proxy()
@@ -180,9 +194,9 @@ class SiteCloner:
                     
                 logger.info(f"Fetching: {url}")
                 
-                loop = asyncio.get_event_loop()
+                loop = asyncio.get_running_loop()
                 response = await loop.run_in_executor(
-                    None, 
+                    None,
                     lambda: self.session.get(url, timeout=self.timeout)
                 )
                 
@@ -211,29 +225,30 @@ class SiteCloner:
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(headless=True)
                     
-                    context_args = {}
-                    if self.use_tor:
-                        context_args["proxy"] = {"server": self.tor_proxy}
-                    
-                    context = await browser.new_context(
-                        user_agent=self.user_agent,
-                        **context_args
-                    )
-                    page = await context.new_page()
-                    
-                    await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
-                    
-                    # Scroll to trigger lazy loading
-                    for i in range(scroll_times):
-                        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                        await asyncio.sleep(wait_time)
-                    
-                    html = await page.content()
-                    await browser.close()
-                    
-                    self.seen_urls.add(normalized)
-                    self.visited_urls.add(normalized)
-                    return html
+                    try:
+                        context_args = {}
+                        if self.use_tor:
+                            context_args["proxy"] = {"server": self.tor_proxy}
+                        
+                        context = await browser.new_context(
+                            user_agent=self.user_agent,
+                            **context_args
+                        )
+                        page = await context.new_page()
+                        
+                        await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
+                        
+                        # Scroll to trigger lazy loading
+                        for i in range(scroll_times):
+                            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                            await asyncio.sleep(wait_time)
+                        
+                        html = await page.content()
+                        self.seen_urls.add(normalized)
+                        self.visited_urls.add(normalized)
+                        return html
+                    finally:
+                        await browser.close()
                     
             except Exception as e:
                 logger.error(f"Dynamic fetch error for {url}: {e}")
@@ -365,32 +380,37 @@ class SiteCloner:
             "timestamp": datetime.now().isoformat(),
             "settings": {
                 "depth": self.depth,
+                "effective_depth": depth_limit,
                 "concurrency": self.concurrency,
                 "delay": self.delay,
                 "auto_organize": self.auto_organize,
-                "download_all_assets": self.download_all_assets
+                "download_all_assets": self.download_all_assets,
+                "max_pages": self.max_pages,
+                "follow_external": self.follow_external,
+                "include_subdomains": self.include_subdomains
             }
         }
         
         queue = [(start_url, 0)]
         
+        depth_limit = self.depth
         if mode == 'everything':
             self.follow_external = True
             self.include_subdomains = True
-            self.depth = max(self.depth, 8)
+            depth_limit = max(depth_limit, 8)
             self.max_pages = max(self.max_pages, 1000)
 
         logger.info(f"🚀 Starting clone of {start_url}")
-        logger.info(f"   Mode: {mode}, Depth: {self.depth}, Output: {domain_dir}")
+        logger.info(f"   Mode: {mode}, Depth: {depth_limit}, Output: {domain_dir}")
         
         # Handle depth=0 as unlimited (use max_pages limit instead)
-        is_unlimited = self.depth == 0
-        effective_depth = self.depth if not is_unlimited else 999
+        is_unlimited = depth_limit == 0
+        effective_depth = 999 if is_unlimited else depth_limit
         
         while queue:
             current_url, current_depth = queue.pop(0)
             
-            if not is_unlimited and current_depth > self.depth:
+            if current_depth > effective_depth:
                 continue
             
             # Fetch page

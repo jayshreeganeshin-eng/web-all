@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0.0", "black>=24.0.0", "ruff>=0.1.0"]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.21.0", "black>=24.0.0", "ruff>=0.1.0"]
 
 [project.scripts]
 web-all = "web_all.cli:main"

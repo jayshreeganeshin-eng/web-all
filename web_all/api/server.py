@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, FileResponse
@@ -43,6 +44,13 @@ OUTPUT_DIR = Path("./output")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 
+def validate_url(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError("Invalid URL: must be http:// or https://")
+    return url
+
+
 class CloneRequest(BaseModel):
     url: str
     mode: str = "static"
@@ -51,6 +59,7 @@ class CloneRequest(BaseModel):
     discover_invisible: bool = False
     ai_enabled: bool = False
     everything: bool = False
+    max_pages: int = 1000
     output_name: Optional[str] = None
 
 
@@ -96,7 +105,8 @@ async def run_clone_job(job_id: str, request: CloneRequest):
         cloner = SiteCloner(
             output_dir=str(output_path),
             depth=request.depth,
-            use_tor=request.use_tor
+            use_tor=request.use_tor,
+            max_pages=request.max_pages
         )
         
         if request.discover_invisible and request.mode in ["static", "dynamic"]:
@@ -178,6 +188,14 @@ async def api_health():
 @app.post("/api/v1/clone")
 async def create_clone_job(request: CloneRequest, background_tasks: BackgroundTasks):
     """Create a new cloning job."""
+    if request.max_pages < 1:
+        raise HTTPException(status_code=400, detail="max_pages must be at least 1")
+
+    try:
+        validate_url(request.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     job_id = str(uuid.uuid4())
     
     jobs[job_id] = {
@@ -274,6 +292,10 @@ async def view_file(job_id: str, filename: str):
     
     output_path = Path(job.get("output_path", ""))
     file_path = output_path / filename
+    resolved_output = output_path.resolve()
+    resolved_file = file_path.resolve()
+    if not str(resolved_file).startswith(str(resolved_output)):
+        raise HTTPException(status_code=400, detail="Invalid filename")
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")

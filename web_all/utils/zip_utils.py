@@ -42,7 +42,7 @@ def create_zip_archive(source_dir: str, output_path: Optional[str] = None) -> st
             for file in files:
                 file_path = Path(root) / file
                 # Calculate relative path for archive
-                arcname = file_path.relative_to(source_path.parent)
+                arcname = file_path.relative_to(source_path)
                 zipf.write(file_path, arcname)
     
     return str(output_path)
