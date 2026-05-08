@@ -27,7 +27,8 @@ app = FastAPI(title="web-all API", version="3.0.0")
 # GUI directory used for serving the frontend at /
 GUI_DIR: Optional[str] = None
 
-# Job storage
+# In-memory job storage
+# Note: For production use, consider using a persistent storage backend
 jobs: Dict[str, Dict[str, Any]] = {}
 
 # AI Configuration storage (in-memory, can be persisted)
@@ -323,7 +324,7 @@ async def view_file(job_id: str, filename: str):
 
 @app.get("/api/v1/jobs")
 async def list_jobs():
-    """List all jobs."""
+    """List all jobs with basic info."""
     return {
         "jobs": [
             {
@@ -337,6 +338,16 @@ async def list_jobs():
             for job_id, job in jobs.items()
         ]
     }
+
+
+@app.delete("/api/v1/jobs/{job_id}")
+async def delete_job(job_id: str):
+    """Delete a job and clean up resources."""
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    del jobs[job_id]
+    return {"message": f"Job {job_id} deleted successfully"}
 
 
 @app.get("/api/v1/ai/providers")

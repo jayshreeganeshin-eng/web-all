@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 
 def _validate_url(url: str) -> str:
+    """Validate URL format."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         raise ValueError("Invalid URL. Use a valid http:// or https:// address.")
@@ -76,7 +77,6 @@ def _handle_clone(args):
     from .core.cloner import SiteCloner
     from .core.invisible import InvisibleContentEngine
     from .utils.ai_engine import AIEngine
-    from urllib.parse import urlparse
 
     try:
         _validate_url(args.url)
@@ -182,7 +182,6 @@ def _handle_text(args):
     """Handle text command."""
     from .core.cloner import SiteCloner
     from bs4 import BeautifulSoup
-    from urllib.parse import urlparse
 
     print(f"📝 Extracting text from {args.url}...")
 
@@ -201,12 +200,11 @@ def _handle_text(args):
             tag.decompose()
 
         text = soup.get_text(separator="\n", strip=True)
+        print(f"✓ Extracted {len(text)} characters")
 
         parsed = urlparse(args.url)
         out_file = output_dir / f"{parsed.netloc.replace('.', '_')}.txt"
         out_file.write_text(text, encoding="utf-8")
-
-        print(f"✓ Extracted {len(text)} characters")
 
     asyncio.run(run())
     print(f"✅ Text saved to {args.output}")
@@ -215,7 +213,6 @@ def _handle_text(args):
 def _handle_serve(args):
     """Handle serve command."""
     from .api.server import start_api
-    from pathlib import Path
 
     gui_dir = None if args.no_gui else str(Path(__file__).parent / "gui")
     print(f"🌐 Starting web-all server on http://{args.host}:{args.port}")
