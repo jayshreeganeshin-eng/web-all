@@ -470,8 +470,6 @@ Return only comma-separated tags, no explanations."""
                             f"{json.dumps(results['structured_data'], indent=2)}\n"
                             f"```\n"
                         )
-                            f"## Structured Data\n```json\n{json.dumps(results['structured_data'], indent=2)}\n```\n"
-                        )
 
             print(f"✅ AI analysis complete! Saved to {output_dir}")
 
