@@ -464,10 +464,14 @@ class SiteCloner:
         logger.info(f"🚀 Starting clone of {start_url}")
         logger.info(f"   Mode: {mode}, Depth: {self.depth}, Output: {domain_dir}")
         
+        # Handle depth=0 as unlimited (use max_pages limit instead)
+        is_unlimited = self.depth == 0
+        effective_depth = self.depth if not is_unlimited else 999
+        
         while queue:
             current_url, current_depth = queue.pop(0)
             
-            if current_depth > self.depth:
+            if not is_unlimited and current_depth > self.depth:
                 continue
             
             # Fetch page
@@ -494,7 +498,7 @@ class SiteCloner:
                         self.save_asset(asset_url, asset_type)
             
             # Extract links for crawling
-            if current_depth < self.depth:
+            if current_depth < effective_depth:
                 links = self.extract_links(html, current_url)
                 for link in links:
                     normalized = self._normalize_url(link)

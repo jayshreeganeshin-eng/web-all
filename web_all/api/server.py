@@ -166,13 +166,13 @@ async def root():
         if index_file.exists():
             return FileResponse(str(index_file), media_type="text/html")
 
-    return {"message": "web-all API is running", "version": "2.0.0"}
+    return {"message": "web-all API is running", "version": "3.0.0"}
 
 
 @app.get("/api/v1/health")
 async def api_health():
     """API health check endpoint."""
-    return {"message": "web-all API is running", "version": "2.0.0"}
+    return {"message": "web-all API is running", "version": "3.0.0"}
 
 
 @app.post("/api/v1/clone")

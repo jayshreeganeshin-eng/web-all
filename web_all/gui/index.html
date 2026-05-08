@@ -323,8 +323,9 @@
                     </script>
                     
                     <div class="form-group">
-                        <label for="depth">Crawl Depth (0 = current page only)</label>
-                        <input type="number" id="depth" name="depth" min="0" max="10" value="2">
+                        <label for="depth">Crawl Depth (0 = all pages, 1+ = specific depth levels)</label>
+                        <input type="number" id="depth" name="depth" min="0" max="10" value="0">
+                        <small style="color: #666; display: block; margin-top: 5px;">Set to 0 for unlimited crawling (all pages from domain), or specify a number for limited depth</small>
                     </div>
                     
                     <div class="form-group">
