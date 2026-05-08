@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "language": "Español",
+    "code": "es",
+    "version": "4.2.0"
+  },
+  "app": {
+    "name": "web-all",
+    "tagline": "Clonador y Rastreador de Sitios Web con IA",
+    "version_badge": "v4.2.0 con Funciones Mundiales"
+  },
+  "clone": {
+    "starting": "🚀 Clonando {url}...",
+    "complete": "✅ ¡Clonación completa! Salida: {output}",
+    "fetching": "Obteniendo: {url}",
+    "saved": "Guardado: {path}",
+    "downloaded": "Descargado {type}: {name}",
+    "errors": "❌ Errores: {count}",
+    "pages_visited": "📄 Páginas visitadas: {count}",
+    "images_downloaded": "🖼️ Imágenes descargadas: {count}",
+    "css_files": "🎨 Archivos CSS: {count}",
+    "js_files": "⚙️ Archivos JS: {count}",
+    "total_assets": "📦 Total de activos: {count}",
+    "blocked_robots": "Bloqueado por robots.txt: {url}"
+  },
+  "invisible": {
+    "discovering": "🔍 Descubriendo contenido invisible...",
+    "expanded": "✓ Contenido expandido guardado en {path}",
+    "clicking": "Haciendo clic en elementos expandibles...",
+    "hovering": "Pasando el cursor sobre elementos...",
+    "complete": "Todo el contenido oculto expandido exitosamente"
+  },
+  "ai": {
+    "analyzing": "🤖 Ejecutando análisis de IA en {url}...",
+    "complete": "✅ ¡Análisis de IA completo!",
+    "failed": "⚠️ Análisis de IA falló: {error}",
+    "no_key": "⚠️ Sin clave API para {provider}. Establezca --ai-key o variable de entorno.",
+    "providers": {
+      "ollama": "🦙 Ollama (Local)",
+      "nvidia": "🚀 NVIDIA NIM",
+      "groq": "⚡ Groq Cloud",
+      "openrouter": "🌐 OpenRouter",
+      "huggingface": "🤗 HuggingFace"
+    }
+  },
+  "commands": {
+    "clone": "Clonación completa del sitio web con activos",
+    "images": "Descargar todas las imágenes",
+    "text": "Extraer texto de páginas",
+    "serve": "Iniciar servidor GUI web",
+    "help": "Mostrar este mensaje de ayuda"
+  },
+  "options": {
+    "tor": "🧅 Usar Tor (sitios .onion)",
+    "dynamic": "Usar renderizado dinámico",
+    "discover_invisible": "🔍 Descubrir Contenido Invisible",
+    "ai_enabled": "🤖 Habilitar Análisis de IA",
+    "everything": "Todo (Captura Completa)"
+  },
+  "status": {
+    "queued": "En Cola",
+    "running": "Ejecutando",
+    "completed": "Completado",
+    "failed": "Fallido"
+  },
+  "errors": {
+    "invalid_url": "URL inválida. Use una dirección http:// o https:// válida.",
+    "fetch_failed": "Error al obtener la página",
+    "job_not_found": "Trabajo no encontrado",
+    "not_completed": "Trabajo no completado",
+    "file_not_found": "Archivo no encontrado",
+    "max_pages": "--max-pages debe ser al menos 1"
+  },
+  "modes": {
+    "static": "Clonación Estática (Rápido)",
+    "dynamic": "Clonación Dinámica (JavaScript)",
+    "images": "Solo Imágenes",
+    "text": "Solo Texto",
+    "deep_crawl": "Rastreo Profundo (Todas las Páginas)",
+    "everything": "Todo (Captura Completa)"
+  },
+  "features": {
+    "tor_support": "Soporte Tor",
+    "ai_analysis": "Análisis de IA",
+    "hidden_content": "Descubrimiento de Contenido Oculto",
+    "multi_language": "Soporte Multi-Idioma",
+    "auto_organize": "Auto-Organizar Activos",
+    "zip_export": "Exportación ZIP"
+  }
+}
