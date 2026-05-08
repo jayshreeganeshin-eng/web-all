@@ -223,32 +223,59 @@ class SiteCloner:
                 logger.info(f"Dynamic fetch: {url}")
                 
                 async with async_playwright() as p:
-                    browser = await p.chromium.launch(headless=True)
+                    # Launch browser without proxy by default
+                    browser_args = {"headless": True}
                     
                     try:
                         context_args = {}
+                        
+                        # Only use Tor proxy if explicitly requested and available
                         if self.use_tor:
-                            context_args["proxy"] = {"server": self.tor_proxy}
+                            try:
+                                import aiohttp
+                                async with aiohttp.ClientSession() as session:
+                                    async with session.get("https://check.torproject.org/", 
+                                                           proxy=self.tor_proxy, 
+                                                           timeout=5) as resp:
+                                        pass
+                                context_args["proxy"] = {"server": self.tor_proxy}
+                                logger.info(f"Using Tor proxy at {self.tor_proxy}")
+                            except Exception as e:
+                                logger.warning(f"Tor proxy not available ({e}), continuing without proxy")
                         
-                        context = await browser.new_context(
-                            user_agent=self.user_agent,
-                            **context_args
-                        )
-                        page = await context.new_page()
+                        browser = await p.chromium.launch(**browser_args)
                         
-                        await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
+                        try:
+                            context = await browser.new_context(
+                                user_agent=self.user_agent,
+                                **context_args
+                            )
+                            page = await context.new_page()
+                            
+                            # Navigate with more lenient settings to avoid proxy errors
+                            await page.goto(url, wait_until="domcontentloaded", timeout=self.timeout * 1000)
+                            
+                            # Wait for network idle separately with shorter timeout
+                            try:
+                                await page.wait_for_load_state("networkidle", timeout=min(self.timeout * 1000, 10000))
+                            except Exception:
+                                logger.info("Network idle timeout, continuing with current state")
+                            
+                            # Scroll to trigger lazy loading
+                            for i in range(scroll_times):
+                                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                                await asyncio.sleep(wait_time)
+                            
+                            html = await page.content()
+                            self.seen_urls.add(normalized)
+                            self.visited_urls.add(normalized)
+                            return html
+                        finally:
+                            await browser.close()
                         
-                        # Scroll to trigger lazy loading
-                        for i in range(scroll_times):
-                            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                            await asyncio.sleep(wait_time)
-                        
-                        html = await page.content()
-                        self.seen_urls.add(normalized)
-                        self.visited_urls.add(normalized)
-                        return html
-                    finally:
-                        await browser.close()
+                    except Exception as e:
+                        logger.error(f"Browser launch error for {url}: {e}")
+                        return None
                     
             except Exception as e:
                 logger.error(f"Dynamic fetch error for {url}: {e}")
