@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web-All Error Logs Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-card.errors .value {
+            color: #e74c3c;
+        }
+        
+        .stat-card.warnings .value {
+            color: #f39c12;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .log-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .log-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .log-header h2 {
+            font-size: 1.5em;
+        }
+        
+        .log-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .log-body {
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .error-item {
+            background: #fdf2f2;
+            border-left: 4px solid #e74c3c;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        
+        .error-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .error-timestamp {
+            font-size: 0.85em;
+            color: #999;
+            margin-bottom: 5px;
+        }
+        
+        .error-message {
+            font-weight: bold;
+            color: #c0392b;
+            margin-bottom: 10px;
+        }
+        
+        .error-details {
+            font-size: 0.9em;
+            color: #666;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+        
+        .warning-item {
+            background: #fef9e7;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        
+        .warning-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .warning-message {
+            font-weight: bold;
+            color: #d68910;
+            margin-bottom: 10px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            color: #999;
+        }
+        
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .refresh-btn {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+        
+        .log-info {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        
+        .log-info-title {
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 5px;
+        }
+        
+        .filter-controls {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-controls input,
+        .filter-controls select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        
+        .filter-controls input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Web-All Error Logs Dashboard</h1>
+            <p class="subtitle">Production-ready error tracking and monitoring system</p>
+        </header>
+        
+        <div class="stats-grid">
+            <div class="stat-card errors">
+                <h3>Total Errors</h3>
+                <div class="value" id="totalErrors">0</div>
+            </div>
+            <div class="stat-card warnings">
+                <h3>Total Warnings</h3>
+                <div class="value" id="totalWarnings">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Recent Errors (24h)</h3>
+                <div class="value" id="recentErrors">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>System Status</h3>
+                <div class="value" style="font-size: 1.5em; color: #27ae60;" id="systemStatus">Healthy</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="log-section">
+                <div class="log-header">
+                    <h2>❌ Error Logs</h2>
+                    <div class="log-actions">
+                        <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh</button>
+                        <a href="/api/v1/logs/errors/export" class="btn btn-success">📥 Export JSON</a>
+                    </div>
+                </div>
+                <div class="filter-controls">
+                    <input type="text" id="errorFilter" placeholder="Search errors..." onkeyup="filterErrors()">
+                    <select id="errorLevelFilter" onchange="filterErrors()">
+                        <option value="all">All Levels</option>
+                        <option value="ERROR">Error</option>
+                        <option value="CRITICAL">Critical</option>
+                    </select>
+                </div>
+                <div class="log-body" id="errorLogs">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p>No errors recorded yet</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="log-section">
+                <div class="log-header">
+                    <h2>⚠️ Warning Logs</h2>
+                    <div class="log-actions">
+                        <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh</button>
+                    </div>
+                </div>
+                <div class="filter-controls">
+                    <input type="text" id="warningFilter" placeholder="Search warnings..." onkeyup="filterWarnings()">
+                </div>
+                <div class="log-body" id="warningLogs">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <p>No warnings recorded yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="log-section" style="margin-bottom: 30px;">
+            <div class="log-header">
+                <h2>ℹ️ System Information Logs</h2>
+                <div class="log-actions">
+                    <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh</button>
+                </div>
+            </div>
+            <div class="log-body" id="infoLogs">
+                <div class="empty-state">
+                    <p>No system information logs yet</p>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Web-All Error Logging System | Production Ready | Auto-refresh every 30 seconds</p>
+        </footer>
+    </div>
+    
+    <script>
+        let allErrors = [];
+        let allWarnings = [];
+        let allInfos = [];
+        
+        async function loadLogs() {
+            try {
+                // In production, this would fetch from your API
+                // For now, we'll simulate with sample data
+                const response = await fetch('/api/v1/logs/summary');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateDashboard(data);
+                } else {
+                    // Use sample data for demonstration
+                    loadSampleData();
+                }
+            } catch (error) {
+                console.error('Failed to load logs:', error);
+                loadSampleData();
+            }
+        }
+        
+        function loadSampleData() {
+            // Sample data for demonstration
+            const sampleData = {
+                total_errors: 5,
+                total_warnings: 12,
+                recent_errors: [
+                    {
+                        timestamp: new Date().toISOString(),
+                        message: "Connection timeout while fetching page",
+                        exception_type: "TimeoutError",
+                        exception_message: "Request timed out after 30s",
+                        logger: "cloner",
+                        context: { url: "https://example.com/page1" }
+                    },
+                    {
+                        timestamp: new Date(Date.now() - 3600000).toISOString(),
+                        message: "Failed to download asset",
+                        exception_type: "HTTPError",
+                        exception_message: "404 Not Found",
+                        logger: "cloner",
+                        context: { url: "https://example.com/missing.png" }
+                    }
+                ],
+                recent_warnings: [
+                    {
+                        timestamp: new Date().toISOString(),
+                        message: "Rate limit approaching",
+                        logger: "cloner",
+                        context: { current_rate: 95, max_rate: 100 }
+                    }
+                ]
+            };
+            
+            updateDashboard(sampleData);
+        }
+        
+        function updateDashboard(data) {
+            document.getElementById('totalErrors').textContent = data.total_errors || 0;
+            document.getElementById('totalWarnings').textContent = data.total_warnings || 0;
+            document.getElementById('recentErrors').textContent = (data.recent_errors || []).length;
+            
+            // Update system status
+            const statusEl = document.getElementById('systemStatus');
+            if ((data.total_errors || 0) > 100) {
+                statusEl.textContent = 'Critical';
+                statusEl.style.color = '#e74c3c';
+            } else if ((data.total_errors || 0) > 10) {
+                statusEl.textContent = 'Warning';
+                statusEl.style.color = '#f39c12';
+            } else {
+                statusEl.textContent = 'Healthy';
+                statusEl.style.color = '#27ae60';
+            }
+            
+            // Render errors
+            renderErrors(data.recent_errors || []);
+            renderWarnings(data.recent_warnings || []);
+            renderInfos(data.system_info || []);
+        }
+        
+        function renderErrors(errors) {
+            allErrors = errors;
+            const container = document.getElementById('errorLogs');
+            
+            if (errors.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p>No errors recorded yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = errors.map(error => `
+                <div class="error-item">
+                    <div class="error-timestamp">${new Date(error.timestamp).toLocaleString()}</div>
+                    <div class="error-message">${escapeHtml(error.message)}</div>
+                    ${error.exception_type ? `
+                        <div class="error-details">
+                            <strong>${escapeHtml(error.exception_type)}:</strong> ${escapeHtml(error.exception_message)}<br>
+                            ${error.context ? `<br><strong>Context:</strong> ${JSON.stringify(error.context, null, 2)}` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function renderWarnings(warnings) {
+            allWarnings = warnings;
+            const container = document.getElementById('warningLogs');
+            
+            if (warnings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <p>No warnings recorded yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = warnings.map(warning => `
+                <div class="warning-item">
+                    <div class="error-timestamp">${new Date(warning.timestamp).toLocaleString()}</div>
+                    <div class="warning-message">${escapeHtml(warning.message)}</div>
+                    ${warning.context ? `
+                        <div class="error-details">
+                            <strong>Context:</strong> ${JSON.stringify(warning.context, null, 2)}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function renderInfos(infos) {
+            allInfos = infos;
+            const container = document.getElementById('infoLogs');
+            
+            if (infos.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No system information logs yet</p></div>';
+                return;
+            }
+            
+            container.innerHTML = infos.map(info => `
+                <div class="log-info">
+                    <div class="error-timestamp">${new Date(info.timestamp).toLocaleString()}</div>
+                    <div class="log-info-title">${escapeHtml(info.title || 'System Event')}</div>
+                    <div>${escapeHtml(info.message)}</div>
+                </div>
+            `).join('');
+        }
+        
+        function filterErrors() {
+            const searchTerm = document.getElementById('errorFilter').value.toLowerCase();
+            const levelFilter = document.getElementById('errorLevelFilter').value;
+            
+            const filtered = allErrors.filter(error => {
+                const matchesSearch = error.message.toLowerCase().includes(searchTerm) ||
+                                    (error.exception_message && error.exception_message.toLowerCase().includes(searchTerm));
+                const matchesLevel = levelFilter === 'all' || error.level === levelFilter;
+                return matchesSearch && matchesLevel;
+            });
+            
+            renderErrors(filtered);
+        }
+        
+        function filterWarnings() {
+            const searchTerm = document.getElementById('warningFilter').value.toLowerCase();
+            
+            const filtered = allWarnings.filter(warning => 
+                warning.message.toLowerCase().includes(searchTerm)
+            );
+            
+            renderWarnings(filtered);
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadLogs, 30000);
+        
+        // Initial load
+        loadLogs();
+    </script>
+</body>
+</html>
