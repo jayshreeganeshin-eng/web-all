@@ -294,7 +294,7 @@ class SiteCloner:
     async def fetch_page_dynamic(
         self, url: str, scroll_times: int = 3, wait_time: float = 2.0
     ) -> Optional[str]:
-        """Fetch page using headless browser for JavaScript rendering."""
+        """Fetch page using headless browser for JavaScript rendering with fallback to static fetch."""
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
@@ -303,36 +303,70 @@ class SiteCloner:
 
                 logger.info(f"Dynamic fetch: {url}")
 
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(headless=True)
+                try:
+                    async with async_playwright() as p:
+                        browser = await p.chromium.launch(headless=True)
 
-                    try:
-                        context_args = {}
-                        if self.use_tor:
-                            context_args["proxy"] = {"server": self.tor_proxy}
+                        try:
+                            context_args = {}
+                            if self.use_tor:
+                                context_args["proxy"] = {"server": self.tor_proxy}
 
-                        context = await browser.new_context(
-                            user_agent=self.user_agent, **context_args
-                        )
-                        page = await context.new_page()
+                            context = await browser.new_context(
+                                user_agent=self.user_agent, **context_args
+                            )
+                            page = await context.new_page()
 
-                        await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
+                            await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
 
-                        # Scroll to trigger lazy loading
-                        for i in range(scroll_times):
-                            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                            await asyncio.sleep(wait_time)
+                            # Scroll to trigger lazy loading
+                            for i in range(scroll_times):
+                                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                                await asyncio.sleep(wait_time)
 
-                        html = await page.content()
-                        self.seen_urls.add(normalized)
-                        self.visited_urls.add(normalized)
-                        return html
-                    finally:
-                        await browser.close()
+                            html = await page.content()
+                            self.seen_urls.add(normalized)
+                            self.visited_urls.add(normalized)
+                            return html
+                        finally:
+                            await browser.close()
+                except Exception as pw_error:
+                    # Fallback to static fetch if Playwright fails (e.g., browser not installed)
+                    logger.warning(f"Playwright failed for {url}: {pw_error}. Falling back to static fetch.")
+                    return await self.fetch_page_static_fallback(url)
 
             except Exception as e:
                 logger.error(f"Dynamic fetch error for {url}: {e}")
                 return None
+
+    async def fetch_page_static_fallback(self, url: str) -> Optional[str]:
+        """Fallback static fetch method when Playwright is unavailable."""
+        import time
+        start_time = time.perf_counter()
+        try:
+            normalized = self._normalize_url(url)
+            if normalized in self.seen_urls:
+                return None
+
+            logger.info(f"Static fallback fetch: {url}")
+
+            loop = asyncio.get_running_loop()
+            response = await loop.run_in_executor(
+                None, lambda: self.session.get(url, timeout=self.timeout)
+            )
+
+            if response.status_code == 200:
+                self.seen_urls.add(normalized)
+                self.visited_urls.add(normalized)
+                elapsed = time.perf_counter() - start_time
+                self._perf_metrics["fetch"].append(elapsed)
+                return response.text
+            else:
+                logger.warning(f"Static fallback failed {url}: {response.status_code}")
+                return None
+        except Exception as e:
+            logger.error(f"Static fallback error for {url}: {e}")
+            return None
 
     def extract_links(self, html: str, base_url: str) -> List[str]:
         """Extract all links from HTML."""
