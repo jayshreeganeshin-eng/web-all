@@ -282,9 +282,6 @@ class SiteCloner:
 
     def _check_robots_allowed(self, url: str) -> bool:
         """Check if URL is allowed by robots.txt with caching."""
-        import time
-        from urllib.parse import urlparse
-
         parsed = urlparse(url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
 
