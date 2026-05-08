@@ -62,19 +62,42 @@ class InvisibleContentEngine:
         
         try:
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
+                browser_args = {"headless": True}
                 
+                # Only launch with proxy if explicitly requested and proxy is available
                 context_args: Dict[str, Any] = {}
                 if self.use_tor:
-                    context_args["proxy"] = {"server": self.tor_proxy}
+                    try:
+                        # Test if Tor proxy is accessible before using it
+                        import aiohttp
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get("https://check.torproject.org/", 
+                                                   proxy=self.tor_proxy, 
+                                                   timeout=5) as resp:
+                                pass
+                        context_args["proxy"] = {"server": self.tor_proxy}
+                        logger.info(f"Using Tor proxy at {self.tor_proxy}")
+                    except Exception as e:
+                        logger.warning(f"Tor proxy not available ({e}), continuing without proxy")
+                        self.use_tor = False
                 
+                browser = await p.chromium.launch(**browser_args)
                 context = await browser.new_context(**context_args)
                 yield context
+        except Exception as e:
+            logger.error(f"Browser context error: {e}")
+            raise
         finally:
-            if context:
-                await context.close()
-            if browser:
-                await browser.close()
+            try:
+                if context:
+                    await context.close()
+            except Exception:
+                pass
+            try:
+                if browser:
+                    await browser.close()
+            except Exception:
+                pass
     
     async def expand_all_content(
         self,
@@ -99,7 +122,14 @@ class InvisibleContentEngine:
                 page = await context.new_page()
                 
                 try:
-                    await page.goto(url, wait_until="networkidle", timeout=self.timeout)
+                    # Navigate with more lenient settings to avoid proxy errors
+                    await page.goto(url, wait_until="domcontentloaded", timeout=self.timeout)
+                    
+                    # Wait for network idle separately with shorter timeout
+                    try:
+                        await page.wait_for_load_state("networkidle", timeout=min(self.timeout, 10000))
+                    except Exception:
+                        logger.info("Network idle timeout, continuing with current state")
                     
                     # Optimized scrolling with early termination
                     for i in range(scroll_iterations):
@@ -188,7 +218,14 @@ class InvisibleContentEngine:
             page = await context.new_page()
             
             try:
-                await page.goto(url, wait_until="networkidle", timeout=self.timeout)
+                # Navigate with more lenient settings to avoid proxy errors
+                await page.goto(url, wait_until="domcontentloaded", timeout=self.timeout)
+                
+                # Wait for network idle separately with shorter timeout
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=min(self.timeout, 10000))
+                except Exception:
+                    logger.info("Network idle timeout, continuing with current state")
                 
                 # Fill form fields in parallel where possible
                 if input_values:
@@ -202,7 +239,10 @@ class InvisibleContentEngine:
                 submitted = await self._submit_form(page, submit_selector, input_values)
                 
                 if submitted:
-                    await page.wait_for_load_state("networkidle")
+                    try:
+                        await page.wait_for_load_state("networkidle", timeout=min(self.timeout, 10000))
+                    except Exception:
+                        logger.info("Network idle timeout after form submission, continuing with current state")
                 
                 html = await page.content()
                 return html
@@ -280,7 +320,15 @@ class InvisibleContentEngine:
             page.on("request", handle_request)
             
             try:
-                await page.goto(url, wait_until="networkidle", timeout=self.timeout)
+                # Navigate with more lenient settings to avoid proxy errors
+                await page.goto(url, wait_until="domcontentloaded", timeout=self.timeout)
+                
+                # Wait for network idle separately with shorter timeout
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=min(self.timeout, 10000))
+                except Exception:
+                    logger.info("Network idle timeout, continuing with current state")
+                
                 await page.wait_for_timeout(2000)
                 
             except Exception as e:
