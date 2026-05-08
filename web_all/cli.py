@@ -36,6 +36,9 @@ def main():
     clone_p.add_argument("--discover-invisible", action="store_true", help="Discover hidden content")
     clone_p.add_argument("--everything", action="store_true", help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl")
     clone_p.add_argument("--ai-enabled", action="store_true", help="Enable AI analysis for this clone")
+    clone_p.add_argument("--ai-provider", choices=["openrouter", "groq", "huggingface", "nvidia", "ollama"], default="ollama", help="AI provider to use")
+    clone_p.add_argument("--ai-key", help="API key for AI provider (not needed for ollama)")
+    clone_p.add_argument("--ai-model", help="Specific model to use (optional)")
     clone_p.add_argument("--max-pages", type=int, default=1000, help="Maximum number of pages to crawl")
 
     # Images command
@@ -122,13 +125,40 @@ def _handle_clone(args):
 
         if args.ai_enabled:
             try:
-                ai_engine = AIEngine({"enabled": True, "provider": "ollama", "base_url": "http://localhost:11434"})
+                ai_config = {
+                    "enabled": True,
+                    "provider": args.ai_provider,
+                    "base_url": "http://localhost:11434" if args.ai_provider == "ollama" else None
+                }
+                
+                # Add API key if provided or required
+                if args.ai_key:
+                    ai_config["api_key"] = args.ai_key
+                elif args.ai_provider in ["openrouter", "groq", "huggingface", "nvidia"]:
+                    # Try to get from environment
+                    import os
+                    env_key_map = {
+                        "openrouter": "OPENROUTER_API_KEY",
+                        "groq": "GROQ_API_KEY",
+                        "huggingface": "HUGGINGFACE_API_KEY",
+                        "nvidia": "NVIDIA_API_KEY"
+                    }
+                    env_key = os.environ.get(env_key_map.get(args.ai_provider, ""))
+                    if env_key:
+                        ai_config["api_key"] = env_key
+                    else:
+                        print(f"⚠️ No API key provided for {args.ai_provider}. Set --ai-key or {env_key_map.get(args.ai_provider, '')} env var.")
+                
+                if args.ai_model:
+                    ai_config["model"] = args.ai_model
+                
+                ai_engine = AIEngine(ai_config)
                 parsed = urlparse(args.url)
                 index_html = Path(args.output) / parsed.netloc.replace('.', '_') / "index.html"
                 if index_html.exists():
                     html = index_html.read_text(encoding='utf-8')
                     await ai_engine.analyze_and_enhance(html, args.url, index_html.parent)
-                    print("✅ AI analysis complete!")
+                    print(f"✅ AI analysis complete with {args.ai_provider}!")
                 else:
                     print("⚠️ index.html not found in clone output; skipping AI analysis.")
             except Exception as e:

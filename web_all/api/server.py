@@ -358,6 +358,11 @@ async def set_ai_config(config: AIConfigRequest):
         if not config.api_key or len(config.api_key) < 10:
             raise HTTPException(status_code=400, detail="Valid API key required for this provider")
     
+    # Additional validation for NVIDIA
+    if config.enabled and config.provider == "nvidia":
+        if not config.api_key or len(config.api_key) < 10:
+            raise HTTPException(status_code=400, detail="Valid NVIDIA API key required (get from build.nvidia.com)")
+    
     ai_config = {
         "enabled": config.enabled,
         "provider": config.provider,

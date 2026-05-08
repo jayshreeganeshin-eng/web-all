@@ -387,6 +387,10 @@
                                 <h4>🦙 Ollama (Local)</h4>
                                 <p>Completely free, runs locally. No API key needed.</p>
                             </div>
+                            <div class="provider-card" data-provider="nvidia" onclick="selectProvider('nvidia')">
+                                <h4>🚀 NVIDIA NIM</h4>
+                                <p>Enterprise AI models with free tier. High performance.</p>
+                            </div>
                             <div class="provider-card" data-provider="groq" onclick="selectProvider('groq')">
                                 <h4>⚡ Groq Cloud</h4>
                                 <p>Free tier available. Super fast Llama models.</p>
@@ -508,9 +512,14 @@
             if (provider === 'ollama') {
                 apiKeyGroup.style.display = 'none';
                 baseUrlGroup.style.display = 'block';
+            } else if (provider === 'nvidia') {
+                apiKeyGroup.style.display = 'block';
+                baseUrlGroup.style.display = 'none';
+                document.getElementById('apiKey').placeholder = 'nvapi-xxxxxxxxxxxx or your NVIDIA API key';
             } else {
                 apiKeyGroup.style.display = 'block';
                 baseUrlGroup.style.display = 'none';
+                document.getElementById('apiKey').placeholder = 'Paste your API key here';
             }
         }
 

@@ -141,6 +141,48 @@ class HuggingFaceProvider(AIProvider):
                     raise Exception(f"HuggingFace error: {resp.status} - {error_text}")
 
 
+class NvidiaProvider(AIProvider):
+    """NVIDIA NIM - Enterprise AI models with free tier."""
+    
+    def __init__(self, api_key: str, model: str = "meta/llama3-70b-instruct"):
+        super().__init__(api_key, "https://integrate.api.nvidia.com/v1")
+        self.model = model
+    
+    async def generate(self, prompt: str, system_prompt: str = "You are a helpful assistant.", model: Optional[str] = None) -> str:
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        
+        payload = {
+            "model": model or self.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 1024,
+            "temperature": 0.7
+        }
+        
+        # Use connection pooling with timeout
+        timeout = aiohttp.ClientTimeout(total=60, connect=10)
+        connector = aiohttp.TCPConnector(limit=10, ttl_dns_cache=300)
+        
+        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+            try:
+                async with session.post(f"{self.base_url}/chat/completions", headers=headers, json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if data.get("choices") and len(data["choices"]) > 0:
+                            return data["choices"][0]["message"]["content"]
+                        raise Exception("NVIDIA: No choices in response")
+                    else:
+                        error_text = await resp.text()
+                        raise Exception(f"NVIDIA error: {resp.status} - {error_text}")
+            finally:
+                await connector.close()
+
+
 class OllamaProvider(AIProvider):
     """Ollama - Local AI server (completely free, no API key needed)."""
     
@@ -198,6 +240,11 @@ class AIEngine:
             if not self.api_key:
                 raise ValueError("HuggingFace requires an API key")
             return HuggingFaceProvider(self.api_key, self.model or "mistralai/Mistral-7B-Instruct-v0.2")
+        
+        elif self.provider_name == "nvidia":
+            if not self.api_key:
+                raise ValueError("NVIDIA requires an API key")
+            return NvidiaProvider(self.api_key, self.model or "meta/llama3-70b-instruct")
         
         elif self.provider_name == "ollama":
             return OllamaProvider(self.config.get("base_url", "http://localhost:11434"), self.model or "llama3")
@@ -383,13 +430,17 @@ HTML:
 
 def get_available_providers() -> List[str]:
     """List all available AI providers."""
-    return ["openrouter", "groq", "huggingface", "ollama"]
+    return ["openrouter", "groq", "huggingface", "nvidia", "ollama"]
 
 
 def validate_api_key(provider: str, api_key: str) -> bool:
     """Validate API key format (basic check)."""
     if provider == "ollama":
         return True  # No key needed
+    
+    if provider == "nvidia":
+        # NVIDIA keys are typically nvapi-xxxxx or just long strings
+        return bool(api_key and len(api_key) >= 10)
     
     if not api_key or len(api_key) < 10:
         return False
