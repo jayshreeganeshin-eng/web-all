@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "language": "العربية",
+    "code": "ar",
+    "version": "4.2.0",
+    "rtl": true
+  },
+  "app": {
+    "name": "web-all",
+    "tagline": "استنساخ مواقع الويب العالمي المدعوم بالذكاء الاصطناعي",
+    "version_badge": "v4.2.0 with Worldwide Features"
+  },
+  "clone": {
+    "starting": "🚀 جاري استنساخ {url}...",
+    "complete": "✅ اكتمل الاستنساخ! الإخراج: {output}",
+    "fetching": "Fetching: {url}",
+    "saved": "Saved: {path}",
+    "downloaded": "Downloaded {type}: {name}",
+    "errors": "❌ Errors: {count}",
+    "pages_visited": "📄 Pages visited: {count}",
+    "images_downloaded": "🖼️ Images downloaded: {count}",
+    "css_files": "🎨 CSS files: {count}",
+    "js_files": "⚙️ JS files: {count}",
+    "total_assets": "📦 Total assets: {count}",
+    "blocked_robots": "Blocked by robots.txt: {url}"
+  },
+  "invisible": {
+    "discovering": "🔍 Discovering invisible content...",
+    "expanded": "✓ Saved expanded content to {path}",
+    "clicking": "Clicking expandable elements...",
+    "hovering": "Hovering over elements...",
+    "complete": "Successfully expanded all hidden content"
+  },
+  "ai": {
+    "analyzing": "🤖 Running AI analysis on {url}...",
+    "complete": "✅ AI analysis complete!",
+    "failed": "⚠️ AI analysis failed: {error}",
+    "no_key": "⚠️ No API key for {provider}. Set --ai-key or environment variable.",
+    "providers": {
+      "ollama": "🦙 Ollama (Local)",
+      "nvidia": "🚀 NVIDIA NIM",
+      "groq": "⚡ Groq Cloud",
+      "openrouter": "🌐 OpenRouter",
+      "huggingface": "🤗 HuggingFace"
+    }
+  },
+  "commands": {
+    "clone": "Full website clone with assets",
+    "images": "Download all images",
+    "text": "Extract text from pages",
+    "serve": "Start web GUI server",
+    "help": "Show this help message"
+  },
+  "options": {
+    "tor": "🧅 Use Tor (.onion sites)",
+    "dynamic": "Use dynamic rendering",
+    "discover_invisible": "🔍 Discover Invisible Content",
+    "ai_enabled": "🤖 Enable AI Analysis",
+    "everything": "Everything (Full Capture)"
+  },
+  "status": {
+    "queued": "Queued",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "errors": {
+    "invalid_url": "Invalid URL. Use a valid http:// or https:// address.",
+    "fetch_failed": "Failed to fetch page",
+    "job_not_found": "Job not found",
+    "not_completed": "Job not completed",
+    "file_not_found": "File not found",
+    "max_pages": "--max-pages must be at least 1"
+  },
+  "modes": {
+    "static": "Static Clone (Fast)",
+    "dynamic": "Dynamic Clone (JavaScript)",
+    "images": "Images Only",
+    "text": "Text Only",
+    "deep_crawl": "Deep Crawl (All Pages)",
+    "everything": "Everything (Full Capture)"
+  },
+  "features": {
+    "tor_support": "Tor Support",
+    "ai_analysis": "AI Analysis",
+    "hidden_content": "Hidden Content Discovery",
+    "multi_language": "Multi-Language Support",
+    "auto_organize": "Auto-Organize Assets",
+    "zip_export": "ZIP Export"
+  }
+}
