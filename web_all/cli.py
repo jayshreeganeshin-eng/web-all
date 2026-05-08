@@ -24,30 +24,43 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # Clone command
-    clone_p = subparsers.add_parser("clone", help="Full website clone with assets")
+    # Clone command - OPTIMIZED FOR MAXIMUM EXTRACTION BY DEFAULT
+    clone_p = subparsers.add_parser("clone", help="Full website clone with ALL assets (maximum extraction)")
     clone_p.add_argument("url", help="Target website URL")
     clone_p.add_argument("-o", "--output", default="./output", help="Output directory")
     clone_p.add_argument(
-        "-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)"
+        "-d", "--depth", type=int, default=0, help="Crawl depth (0 = UNLIMITED, default)"
     )
-    clone_p.add_argument("-c", "--concurrency", type=int, default=5, help="Concurrent requests")
-    clone_p.add_argument("--delay", type=float, default=0.5, help="Delay between requests")
+    clone_p.add_argument("-c", "--concurrency", type=int, default=20, help="Concurrent requests (default: 20)")
+    clone_p.add_argument("--delay", type=float, default=0.1, help="Delay between requests (default: 0.1s)")
+    clone_p.add_argument("--timeout", type=int, default=60, help="Request timeout in seconds (default: 60)")
     clone_p.add_argument("--tor", action="store_true", help="Use Tor proxy")
-    clone_p.add_argument("--dynamic", action="store_true", help="Use dynamic rendering")
+    clone_p.add_argument("--dynamic", action="store_true", help="Use dynamic rendering for JavaScript sites")
     clone_p.add_argument(
-        "--discover-invisible", action="store_true", help="Discover hidden content"
+        "--discover-invisible", action="store_true", help="Discover hidden/invisible content"
     )
     clone_p.add_argument(
         "--everything",
         action="store_true",
-        help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl",
+        help="MAXIMUM MODE: dynamic rendering + hidden content + deep crawl + AI analysis + all media types",
     )
     clone_p.add_argument(
         "--ai-enabled", action="store_true", help="Enable AI analysis for this clone"
     )
     clone_p.add_argument(
-        "--max-pages", type=int, default=1000, help="Maximum number of pages to crawl"
+        "--max-pages", type=int, default=10000, help="Maximum pages to crawl (default: 10000)"
+    )
+    clone_p.add_argument(
+        "--follow-external", action="store_true", default=True, help="Follow external links (default: enabled)"
+    )
+    clone_p.add_argument(
+        "--no-follow-external", action="store_false", dest="follow_external", help="Don't follow external links"
+    )
+    clone_p.add_argument(
+        "--extract-all-media", action="store_true", default=True, help="Extract videos, fonts, documents (default: enabled)"
+    )
+    clone_p.add_argument(
+        "--aggressive", action="store_true", default=True, help="Aggressive extraction mode (default: enabled)"
     )
 
     # Images command
@@ -105,27 +118,35 @@ def _handle_clone(args):
         print("❌ --max-pages must be at least 1")
         sys.exit(1)
 
-    print(f"🚀 Cloning {args.url}...")
+    print(f"🚀 Cloning {args.url} with MAXIMUM EXTRACTION settings...")
 
     cloner = SiteCloner(
         output_dir=args.output,
-        depth=args.depth,
-        concurrency=args.concurrency,
-        delay=args.delay,
+        depth=args.depth,  # Default 0 = unlimited
+        concurrency=args.concurrency,  # Default 20
+        delay=args.delay,  # Default 0.1s
+        timeout=args.timeout,  # Default 60s
         use_tor=args.tor,
-        max_pages=args.max_pages,
+        max_pages=args.max_pages,  # Default 10000
+        follow_external=args.follow_external,  # Default True
+        extract_all_media=args.extract_all_media,  # Default True
+        aggressive_crawl=args.aggressive,  # Default True
     )
 
     async def run():
         if args.everything:
             print(
-                "⚡ Running full everything capture: dynamic rendering, hidden content discovery, deeper crawl, and AI analysis"
+                "⚡ MAXIMUM MODE ACTIVATED: dynamic rendering + hidden content + deep crawl + AI analysis + all media types"
             )
             args.dynamic = True
             args.discover_invisible = True
             args.ai_enabled = True
-            if args.depth < 4:
-                args.depth = 4
+            # Set aggressive depth for everything mode
+            if args.depth == 0 or args.depth < 5:
+                args.depth = 0  # Keep unlimited
+            # Increase max pages even more
+            if args.max_pages < 20000:
+                args.max_pages = 20000
 
         if args.discover_invisible:
             print("🔍 Discovering invisible content...")
@@ -137,6 +158,7 @@ def _handle_clone(args):
             print(f"✓ Saved expanded content to {output_path}")
 
         mode = "dynamic" if args.dynamic else "static"
+        print(f"📥 Starting clone in {mode} mode with unlimited depth and maximum asset extraction...")
         await cloner.clone_site(args.url, mode=mode)
 
         if args.ai_enabled:

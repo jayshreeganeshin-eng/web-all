@@ -30,15 +30,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
-# Constants
+# Constants - OPTIMIZED FOR MAXIMUM EXTRACTION
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 DEFAULT_TOR_PROXY = "http://127.0.0.1:9050"
-DEFAULT_TIMEOUT = 30
-DEFAULT_CONCURRENCY = 5
-DEFAULT_DELAY = 0.5
-DEFAULT_DEPTH = 2
-MAX_PAGES = 1000
-ASSET_TYPES = {"images", "css", "js"}
+DEFAULT_TIMEOUT = 60  # Increased timeout for large pages
+DEFAULT_CONCURRENCY = 20  # Maximum concurrent requests
+DEFAULT_DELAY = 0.1  # Minimal delay for speed
+DEFAULT_DEPTH = 0  # 0 = UNLIMITED depth by default
+MAX_PAGES = 10000  # Very high limit by default
+ASSET_TYPES = {"images", "css", "js", "fonts", "videos", "documents"}
 
 
 class SiteCloner:
@@ -47,18 +47,22 @@ class SiteCloner:
     def __init__(
         self,
         output_dir: str = "./output",
-        depth: int = DEFAULT_DEPTH,
-        concurrency: int = DEFAULT_CONCURRENCY,
-        delay: float = DEFAULT_DELAY,
+        depth: int = DEFAULT_DEPTH,  # Default 0 = unlimited
+        concurrency: int = DEFAULT_CONCURRENCY,  # Default 20
+        delay: float = DEFAULT_DELAY,  # Default 0.1
         user_agent: Optional[str] = None,
         use_tor: bool = False,
         tor_proxy: str = DEFAULT_TOR_PROXY,
-        timeout: int = DEFAULT_TIMEOUT,
+        timeout: int = DEFAULT_TIMEOUT,  # Default 60s
         respect_robots: bool = False,
         auto_organize: bool = True,
         download_all_assets: bool = True,
         save_metadata: bool = True,
-        max_pages: int = MAX_PAGES,
+        max_pages: int = MAX_PAGES,  # Default 10000
+        follow_external: bool = True,  # Follow external links by default
+        include_subdomains: bool = True,
+        extract_all_media: bool = True,  # Extract videos, fonts, documents
+        aggressive_crawl: bool = True,  # Aggressive mode for maximum extraction
     ):
         self.output_dir = Path(output_dir)
         self.depth = depth
@@ -72,6 +76,8 @@ class SiteCloner:
         self.auto_organize = auto_organize
         self.download_all_assets = download_all_assets
         self.save_metadata = save_metadata
+        self.extract_all_media = extract_all_media
+        self.aggressive_crawl = aggressive_crawl
 
         self.visited_urls: Set[str] = set()
         self.seen_urls: Set[str] = set()
@@ -79,15 +85,17 @@ class SiteCloner:
         self.url_map: Dict[str, Path] = {}
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": self.user_agent})
-        self.follow_external = False
-        self.include_subdomains = True
+        self.follow_external = follow_external  # Use parameter value (default True)
+        self.include_subdomains = include_subdomains
         self.max_pages = max_pages
 
+        # Aggressive retry strategy for maximum success
         retry_strategy = Retry(
-            total=3,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS"],
-            backoff_factor=0.5,
+            total=5,  # More retries
+            status_forcelist=[429, 500, 502, 503, 504, 408, 413, 425],
+            allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
+            backoff_factor=0.3,
+            raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
@@ -97,7 +105,17 @@ class SiteCloner:
             self._setup_tor_proxy()
 
         self.semaphore = asyncio.Semaphore(concurrency)
-        self.stats = {"pages": 0, "images": 0, "css": 0, "js": 0, "other": 0, "errors": 0}
+        self.stats = {
+            "pages": 0, 
+            "images": 0, 
+            "css": 0, 
+            "js": 0, 
+            "fonts": 0,
+            "videos": 0,
+            "documents": 0,
+            "other": 0, 
+            "errors": 0
+        }
 
     def _setup_tor_proxy(self):
         """Configure session to use Tor proxy."""
@@ -258,27 +276,130 @@ class SiteCloner:
         ]
 
     def extract_assets(self, html: str, base_url: str) -> Dict[str, List[str]]:
-        """Extract asset URLs (images, CSS, JS)."""
+        """Extract ALL asset URLs including images, CSS, JS, fonts, videos, and documents."""
         soup = BeautifulSoup(html, "lxml")
-        assets = {"images": [], "css": [], "js": []}
+        assets = {
+            "images": [], 
+            "css": [], 
+            "js": [],
+            "fonts": [],
+            "videos": [],
+            "documents": []
+        }
 
-        # Images
-        assets["images"] = [
-            urljoin(base_url, img["src"].strip())
-            for img in soup.find_all("img", src=True)
-            if not img["src"].strip().startswith(("data:", "javascript:"))
+        # Images - comprehensive extraction from all possible tags
+        img_selectors = [
+            ("img", "src"),
+            ("img", "data-src"),  # Lazy loading
+            ("img", "data-original"),
+            ("source", "src"),  # Picture element sources
+            ("svg", "image"),  # SVG images
         ]
+        images = set()
+        for tag_name, attr in img_selectors:
+            for tag in soup.find_all(tag_name, **{attr: True}):
+                src = tag.get(attr, "").strip()
+                if src and not src.startswith(("data:", "javascript:", "#")):
+                    images.add(urljoin(base_url, src))
+        # Also check srcset attributes
+        for img in soup.find_all(["img", "source"], srcset=True):
+            srcset = img.get("srcset", "")
+            for src in srcset.split(","):
+                url = src.strip().split()[0]
+                if url and not url.startswith(("data:", "javascript:", "#")):
+                    images.add(urljoin(base_url, url))
+        assets["images"] = list(images)
 
-        # CSS
-        assets["css"] = [
-            urljoin(base_url, link["href"].strip())
-            for link in soup.find_all("link", rel="stylesheet", href=True)
+        # CSS - all stylesheet links and style imports
+        css_selectors = [
+            ("link", "href", lambda t: "stylesheet" in t.get("rel", [])),
+            ("link", "href", lambda t: t.get("type") == "text/css"),
         ]
+        css_files = set()
+        for tag_name, attr, condition in css_selectors:
+            for tag in soup.find_all(tag_name, **{attr: True}):
+                if condition(tag):
+                    href = tag.get(attr, "").strip()
+                    if href and not href.startswith(("data:", "javascript:")):
+                        css_files.add(urljoin(base_url, href))
+        # Check for @import in style tags
+        for style in soup.find_all("style"):
+            if style.string:
+                import re
+                imports = re.findall(r'@import\s+[\'"]([^\'"]+)[\'"]', style.string)
+                for imp in imports:
+                    css_files.add(urljoin(base_url, imp))
+        assets["css"] = list(css_files)
 
-        # JS
-        assets["js"] = [
-            urljoin(base_url, script["src"].strip()) for script in soup.find_all("script", src=True)
+        # JavaScript - all script sources
+        js_selectors = [
+            ("script", "src"),
+            ("script", "data-src"),  # Lazy loaded scripts
         ]
+        js_files = set()
+        for tag_name, attr in js_selectors:
+            for tag in soup.find_all(tag_name, **{attr: True}):
+                src = tag.get(attr, "").strip()
+                if src and not src.startswith(("data:", "javascript:")):
+                    js_files.add(urljoin(base_url, src))
+        assets["js"] = list(js_files)
+
+        # Fonts - extract from various sources
+        font_extensions = [".woff", ".woff2", ".ttf", ".otf", ".eot", ".pfa", ".pfb"]
+        fonts = set()
+        # From link tags
+        for link in soup.find_all("link", href=True):
+            href = link.get("href", "").lower()
+            if any(href.endswith(ext) for ext in font_extensions):
+                fonts.add(urljoin(base_url, link["href"]))
+        # From style tags with @font-face
+        for style in soup.find_all("style"):
+            if style.string:
+                import re
+                font_urls = re.findall(r'url\([\'"]?([^\'")]+)[\'"]?\)', style.string)
+                for url in font_urls:
+                    if any(url.lower().endswith(ext) for ext in font_extensions):
+                        fonts.add(urljoin(base_url, url))
+        # From CSS files referenced
+        for css_url in assets["css"]:
+            if any(css_url.lower().endswith(ext) for ext in font_extensions):
+                fonts.add(css_url)
+        assets["fonts"] = list(fonts)
+
+        # Videos - all video sources
+        video_selectors = [
+            ("video", "src"),
+            ("video", "poster"),
+            ("source", "src"),
+        ]
+        videos = set()
+        for tag_name, attr in video_selectors:
+            for tag in soup.find_all(tag_name, **{attr: True}):
+                src = tag.get(attr, "").strip()
+                if src and not src.startswith(("data:", "javascript:")):
+                    # Check if it's a video by extension or type
+                    if any(src.lower().endswith(ext) for ext in [".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"]):
+                        videos.add(urljoin(base_url, src))
+                    # Also check type attribute
+                    tag_type = tag.get("type", "").lower()
+                    if "video" in tag_type:
+                        videos.add(urljoin(base_url, src))
+        assets["videos"] = list(videos)
+
+        # Documents - PDFs, Office docs, etc.
+        doc_extensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", 
+                         ".txt", ".rtf", ".odt", ".ods", ".odp", ".csv", ".xml", ".json"]
+        documents = set()
+        for tag in soup.find_all("a", href=True):
+            href = tag.get("href", "").lower()
+            if any(href.endswith(ext) for ext in doc_extensions):
+                documents.add(urljoin(base_url, tag["href"]))
+        # Also check for download attributes
+        for tag in soup.find_all(attrs={"download": True}):
+            href = tag.get("href", "")
+            if href and not href.startswith(("javascript:", "mailto:", "#")):
+                documents.add(urljoin(base_url, href))
+        assets["documents"] = list(documents)
 
         return assets
 
@@ -478,64 +599,86 @@ class SiteCloner:
         with open(manifest_path, "w", encoding="utf-8") as f:
             json.dump(manifest, f, indent=2, ensure_ascii=False)
 
-        # Create detailed README with comprehensive clone info
+        # Create detailed README with comprehensive clone info - MAXIMUM DETAILS
         readme_path = domain_dir / "README.txt"
         with open(readme_path, "w", encoding="utf-8") as f:
-            f.write("=" * 60 + "\n")
-            f.write("WEBSITE CLONE REPORT - Complete Extraction Summary\n")
-            f.write("=" * 60 + "\n\n")
+            f.write("=" * 80 + "\n")
+            f.write("WEBSITE CLONE REPORT - COMPLETE EXTRACTION SUMMARY (MAXIMUM MODE)\n")
+            f.write("=" * 80 + "\n\n")
             f.write(f"Source URL: {start_url}\n")
             f.write(f"Cloned on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Mode: {mode}\n")
-            f.write(f"Depth: {self.depth} (effective: {depth_limit})\n")
+            f.write(f"Depth: {self.depth} (effective: {depth_limit}) - {'UNLIMITED' if self.depth == 0 else 'limited'}\n")
             f.write(f"Duration: {duration:.2f} seconds\n\n")
-            f.write("-" * 60 + "\n")
-            f.write("EXTRACTION STATISTICS:\n")
-            f.write("-" * 60 + "\n")
+            f.write("-" * 80 + "\n")
+            f.write("EXTRACTION STATISTICS - COMPREHENSIVE:\n")
+            f.write("-" * 80 + "\n")
             f.write(f"  ✓ Pages cloned: {self.stats['pages']}\n")
             f.write(f"  ✓ Images downloaded: {self.stats['images']}\n")
             f.write(f"  ✓ CSS files: {self.stats['css']}\n")
             f.write(f"  ✓ JavaScript files: {self.stats['js']}\n")
+            f.write(f"  ✓ Fonts extracted: {self.stats.get('fonts', 0)}\n")
+            f.write(f"  ✓ Videos downloaded: {self.stats.get('videos', 0)}\n")
+            f.write(f"  ✓ Documents extracted: {self.stats.get('documents', 0)}\n")
             f.write(f"  ✓ Other assets: {self.stats['other']}\n")
             f.write(f"  ✗ Errors encountered: {self.stats['errors']}\n")
             f.write(f"  📦 Total files: {self.stats['pages'] + len(self.downloaded_assets)}\n\n")
-            f.write("-" * 60 + "\n")
-            f.write("FOLDER STRUCTURE:\n")
-            f.write("-" * 60 + "\n")
-            f.write("  /images - All images from the website (PNG, JPG, GIF, SVG, WebP, etc.)\n")
-            f.write("  /css - All stylesheets and style resources\n")
-            f.write("  /js - All JavaScript files and scripts\n")
-            f.write("  /assets - Other assets (fonts, videos, documents, etc.)\n")
-            f.write("  /*.html - Cloned pages with rewritten local links\n")
-            f.write("  manifest.json - Detailed clone information and statistics\n")
-            f.write("  README.txt - This file\n")
+            f.write("-" * 80 + "\n")
+            f.write("FOLDER STRUCTURE - ORGANIZED:\n")
+            f.write("-" * 80 + "\n")
+            f.write("  /images - ALL images from the website (PNG, JPG, GIF, SVG, WebP, ICO, BMP, etc.)\n")
+            f.write("          Includes lazy-loaded images, srcset variants, and data-src images\n")
+            f.write("  /css - ALL stylesheets and style resources including @import chains\n")
+            f.write("  /js - ALL JavaScript files including lazy-loaded scripts and data-src scripts\n")
+            f.write("  /fonts - ALL font files (WOFF, WOFF2, TTF, OTF, EOT, etc.)\n")
+            f.write("  /videos - ALL video files (MP4, WebM, OGG, MOV, AVI, MKV) and posters\n")
+            f.write("  /documents - ALL downloadable documents (PDF, DOC, DOCX, XLS, XLSX, PPT, etc.)\n")
+            f.write("  /assets - Other miscellaneous assets\n")
+            f.write("  /*.html - Cloned pages with rewritten local links for offline browsing\n")
+            f.write("  manifest.json - Detailed clone information, statistics, and performance metrics\n")
+            f.write("  README.txt - This comprehensive report file\n")
             f.write("  ai_analysis.json - AI-generated analysis (if enabled)\n")
-            f.write("  SUMMARY.md - Human-readable AI summary (if enabled)\n\n")
-            f.write("-" * 60 + "\n")
-            f.write("CONFIGURATION USED:\n")
-            f.write("-" * 60 + "\n")
-            f.write(f"  Concurrency: {self.concurrency} simultaneous requests\n")
-            f.write(f"  Delay between requests: {self.delay}s\n")
-            f.write(f"  Timeout: {self.timeout}s\n")
+            f.write("  SUMMARY.md - Human-readable AI summary (if enabled)\n")
+            f.write("  expanded.html - Hidden/invisible content discovery results (if enabled)\n\n")
+            f.write("-" * 80 + "\n")
+            f.write("CONFIGURATION USED - MAXIMUM EXTRACTION SETTINGS:\n")
+            f.write("-" * 80 + "\n")
+            f.write(f"  Concurrency: {self.concurrency} simultaneous requests (high-speed)\n")
+            f.write(f"  Delay between requests: {self.delay}s (minimal for speed)\n")
+            f.write(f"  Timeout: {self.timeout}s (extended for large pages)\n")
             f.write(f"  Tor enabled: {self.use_tor}\n")
             f.write(f"  Auto-organize: {self.auto_organize}\n")
-            f.write(f"  Download all assets: {self.download_all_assets}\n")
-            f.write(f"  Max pages limit: {self.max_pages}\n")
+            f.write(f"  Download all assets: {self.download_all_assets} (comprehensive extraction)\n")
+            f.write(f"  Extract all media types: {self.extract_all_media} (videos, fonts, documents)\n")
+            f.write(f"  Aggressive crawl mode: {self.aggressive_crawl}\n")
+            f.write(f"  Max pages limit: {self.max_pages} (very high limit)\n")
             f.write(f"  Follow external links: {self.follow_external}\n")
-            f.write(f"  Include subdomains: {self.include_subdomains}\n\n")
-            f.write("=" * 60 + "\n")
-            f.write("Clone completed successfully!\n")
-            f.write("=" * 60 + "\n")
+            f.write(f"  Include subdomains: {self.include_subdomains}\n")
+            f.write(f"  Respect robots.txt: {self.respect_robots}\n\n")
+            f.write("-" * 80 + "\n")
+            f.write("PERFORMANCE METRICS:\n")
+            f.write("-" * 80 + "\n")
+            f.write(f"  Total duration: {duration:.2f} seconds\n")
+            f.write(f"  Pages per second: {manifest['performance']['pages_per_second']}\n")
+            f.write(f"  Assets per second: {manifest['performance']['assets_per_second']}\n")
+            f.write(f"  Success rate: {((self.stats['pages'] + len(self.downloaded_assets)) / max(1, self.stats['pages'] + len(self.downloaded_assets) + self.stats['errors'])) * 100:.1f}%\n\n")
+            f.write("=" * 80 + "\n")
+            f.write("✅ Clone completed successfully with MAXIMUM EXTRACTION!\n")
+            f.write("=" * 80 + "\n")
 
-        logger.info("\n✅ Clone complete!")
+        logger.info("\n✅ Clone complete with MAXIMUM EXTRACTION!")
         logger.info(f"   ⏱️  Duration: {duration:.2f} seconds")
         logger.info(f"   📄 Pages visited: {self.stats['pages']}")
         logger.info(f"   🖼️  Images downloaded: {self.stats['images']}")
         logger.info(f"   🎨 CSS files: {self.stats['css']}")
         logger.info(f"   ⚙️  JS files: {self.stats['js']}")
+        logger.info(f"   🔤 Fonts extracted: {self.stats.get('fonts', 0)}")
+        logger.info(f"   🎬 Videos downloaded: {self.stats.get('videos', 0)}")
+        logger.info(f"   📄 Documents extracted: {self.stats.get('documents', 0)}")
         logger.info(f"   📦 Total assets: {len(self.downloaded_assets)}")
         logger.info(f"   ❌ Errors: {self.stats['errors']}")
         logger.info(f"   📁 Output: {domain_dir}")
         logger.info(f"   📊 Performance: {manifest['performance']['pages_per_second']} pages/sec")
+        logger.info(f"   ⚡ Throughput: {manifest['performance']['assets_per_second']} assets/sec")
 
         return manifest

@@ -25,17 +25,21 @@ class TestSiteCloner:
         return SiteCloner(output_dir=str(tmp_path), depth=1, concurrency=2)
     
     def test_init_default_values(self, tmp_path):
-        """Test initialization with default values."""
+        """Test initialization with default values - MAXIMUM EXTRACTION MODE."""
         from web_all.core.cloner import SiteCloner
         
         cloner = SiteCloner(output_dir=str(tmp_path))
         
-        assert cloner.depth == 2
-        assert cloner.concurrency == 5
-        assert cloner.delay == 0.5
-        assert cloner.timeout == 30
+        # New defaults optimized for maximum extraction
+        assert cloner.depth == 0  # Unlimited depth by default
+        assert cloner.concurrency == 20  # High concurrency
+        assert cloner.delay == 0.1  # Minimal delay
+        assert cloner.timeout == 60  # Extended timeout
         assert cloner.use_tor is False
         assert cloner.download_all_assets is True
+        assert cloner.follow_external is True  # Follow external links
+        assert cloner.extract_all_media is True  # Extract videos, fonts, docs
+        assert cloner.aggressive_crawl is True  # Aggressive mode
     
     def test_normalize_url(self, cloner):
         """Test URL normalization for deduplication."""

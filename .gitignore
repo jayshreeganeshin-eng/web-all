@@ -1,9 +1,4 @@
 ```
-# Compiled and build artifacts
-*.pyc
 __pycache__/
-
-# Output directories
-output/
-test_output/
+*.pyc
 ```
