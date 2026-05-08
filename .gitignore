@@ -1,42 +1,14 @@
 ```
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# Logs and temp files
+*.log
+*.tmp
+*.swp
 
-# Dependencies
-.venv/
-venv/
-env/
+# Environment
 .env
 .env.local
 .env.*
 
-# Build artifacts
-dist/
-build/
-target/
-output/
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.swp
-*.swo
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Coverage reports
-.coverage
-coverage/
-htmlcov/
-
-# Testing
-.pytest_cache/
-.mypy_cache/
+# Directories
+logs/
 ```
