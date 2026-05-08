@@ -45,6 +45,10 @@ ASSET_TYPES = {'images', 'css', 'js'}
 class SiteCloner:
     """Main website cloning engine with Tor support and automatic organization."""
     
+    # Class-level cache for robots.txt to avoid repeated fetches
+    _robots_cache: Dict[str, tuple] = {}
+    ROBOTS_CACHE_TTL = 3600  # 1 hour cache
+    
     def __init__(
         self,
         output_dir: str = "./output",
@@ -59,7 +63,9 @@ class SiteCloner:
         auto_organize: bool = True,
         download_all_assets: bool = True,
         save_metadata: bool = True,
-        max_pages: int = MAX_PAGES
+        max_pages: int = MAX_PAGES,
+        enable_caching: bool = True,
+        asset_timeout: Optional[int] = None
     ):
         self.output_dir = Path(output_dir)
         self.depth = depth
@@ -73,6 +79,8 @@ class SiteCloner:
         self.auto_organize = auto_organize
         self.download_all_assets = download_all_assets
         self.save_metadata = save_metadata
+        self.enable_caching = enable_caching
+        self.asset_timeout = asset_timeout or (timeout // 2)  # Faster timeout for assets
         
         self.visited_urls: Set[str] = set()
         self.seen_urls: Set[str] = set()
@@ -90,7 +98,7 @@ class SiteCloner:
             allowed_methods=["HEAD", "GET", "OPTIONS"],
             backoff_factor=0.5,
         )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
+        adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=concurrency, pool_maxsize=concurrency * 2)
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
         
@@ -106,6 +114,9 @@ class SiteCloner:
             "other": 0,
             "errors": 0
         }
+        
+        # Performance tracking
+        self._perf_metrics: Dict[str, List[float]] = {"fetch": [], "save": [], "download": []}
         
     def _setup_tor_proxy(self):
         """Configure session to use Tor proxy."""
@@ -185,11 +196,19 @@ class SiteCloner:
         return output_path
     
     async def fetch_page(self, url: str) -> Optional[str]:
-        """Fetch page content with retry logic."""
+        """Fetch page content with retry logic and performance tracking."""
+        import time
+        start_time = time.perf_counter()
+        
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
                 if normalized in self.seen_urls:
+                    return None
+                
+                # Check robots.txt if enabled
+                if self.respect_robots and not self._check_robots_allowed(url):
+                    logger.info(f"Blocked by robots.txt: {url}")
                     return None
                     
                 logger.info(f"Fetching: {url}")
@@ -203,7 +222,15 @@ class SiteCloner:
                 if response.status_code == 200:
                     self.seen_urls.add(normalized)
                     self.visited_urls.add(normalized)
+                    
+                    # Track performance
+                    elapsed = time.perf_counter() - start_time
+                    self._perf_metrics["fetch"].append(elapsed)
+                    
                     return response.text
+                elif response.status_code == 304:  # Not modified (cached)
+                    logger.debug(f"Cache hit (304): {url}")
+                    return None
                 else:
                     logger.warning(f"Failed to fetch {url}: {response.status_code}")
                     return None
@@ -211,6 +238,58 @@ class SiteCloner:
             except Exception as e:
                 logger.error(f"Error fetching {url}: {e}")
                 return None
+    
+    def _check_robots_allowed(self, url: str) -> bool:
+        """Check if URL is allowed by robots.txt with caching."""
+        from urllib.parse import urlparse
+        import time
+        
+        parsed = urlparse(url)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+        
+        # Check cache first
+        current_time = time.time()
+        if base_url in self._robots_cache:
+            allowed_set, timestamp = self._robots_cache[base_url]
+            if current_time - timestamp < self.ROBOTS_CACHE_TTL:
+                return parsed.path in allowed_set or any(parsed.path.startswith(p) for p in allowed_set)
+        
+        # Fetch and parse robots.txt
+        try:
+            robots_url = f"{base_url}/robots.txt"
+            response = self.session.get(robots_url, timeout=5)
+            if response.status_code == 200:
+                allowed_paths = set()
+                lines = response.text.split('\n')
+                current_user_agent = None
+                found_matching_agent = False
+                
+                for line in lines:
+                    line = line.strip().lower()
+                    if line.startswith('user-agent:'):
+                        agent = line.split(':', 1)[1].strip()
+                        current_user_agent = agent
+                        found_matching_agent = agent == '*' or agent in self.user_agent.lower()
+                    elif line.startswith('disallow:') and found_matching_agent:
+                        path = line.split(':', 1)[1].strip()
+                        if path:
+                            allowed_paths.discard(path)
+                    elif line.startswith('allow:') and found_matching_agent:
+                        path = line.split(':', 1)[1].strip()
+                        if path:
+                            allowed_paths.add(path)
+                
+                # Cache the result
+                self._robots_cache[base_url] = (allowed_paths, current_time)
+                return parsed.path in allowed_paths or not any(parsed.path.startswith(d) for d in [])
+            else:
+                # No robots.txt or error, allow all
+                self._robots_cache[base_url] = (set([parsed.path]), current_time)
+                return True
+        except Exception:
+            # On error, assume allowed
+            self._robots_cache[base_url] = (set([parsed.path]), current_time)
+            return True
     
     async def fetch_page_dynamic(self, url: str, scroll_times: int = 3, wait_time: float = 2.0) -> Optional[str]:
         """Fetch page using headless browser for JavaScript rendering."""
@@ -335,13 +414,17 @@ class SiteCloner:
         logger.info(f"Saved: {output_path}")
     
     def save_asset(self, url: str, asset_type: str):
-        """Download and save asset with organized folder structure."""
+        """Download and save asset with organized folder structure and optimized timeout."""
+        import time
+        start_time = time.perf_counter()
+        
         try:
             normalized = self._normalize_url(url)
             if normalized in self.downloaded_assets:
                 return
             
-            response = self.session.get(url, timeout=self.timeout)
+            # Use shorter timeout for assets (they're less critical)
+            response = self.session.get(url, timeout=self.asset_timeout)
             if response.status_code == 200:
                 output_path = self._get_asset_path(url, asset_type)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -354,11 +437,31 @@ class SiteCloner:
                 stat_key = asset_type if asset_type in self.stats else 'other'
                 self.stats[stat_key] += 1
                 
+                # Track performance
+                elapsed = time.perf_counter() - start_time
+                self._perf_metrics["download"].append(elapsed)
+                
                 logger.info(f"Downloaded {asset_type}: {output_path.name}")
                 
         except Exception as e:
             self.stats['errors'] += 1
-            logger.error(f"Failed to download asset {url}: {e}")
+            logger.debug(f"Failed to download asset {url}: {e}")  # Debug level for noisy asset errors
+    
+    def get_performance_metrics(self) -> Dict[str, Any]:
+        """Get performance statistics for the cloning session."""
+        import statistics
+        
+        metrics = {}
+        for operation, times in self._perf_metrics.items():
+            if times:
+                metrics[f"{operation}_avg_ms"] = round(statistics.mean(times) * 1000, 2)
+                metrics[f"{operation}_min_ms"] = round(min(times) * 1000, 2)
+                metrics[f"{operation}_max_ms"] = round(max(times) * 1000, 2)
+                if len(times) > 1:
+                    metrics[f"{operation}_stddev_ms"] = round(statistics.stdev(times) * 1000, 2)
+        
+        metrics["total_operations"] = sum(len(v) for v in self._perf_metrics.values())
+        return metrics
     
     async def clone_site(self, start_url: str, mode: str = "static"):
         """Main cloning method - automatically downloads full website with organized structure."""

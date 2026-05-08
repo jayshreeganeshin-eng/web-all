@@ -41,17 +41,28 @@ class OpenRouterProvider(AIProvider):
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            "max_tokens": 1024,
+            "temperature": 0.7
         }
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f"{self.base_url}/chat/completions", headers=headers, json=payload) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    return data["choices"][0]["message"]["content"]
-                else:
-                    error_text = await resp.text()
-                    raise Exception(f"OpenRouter error: {resp.status} - {error_text}")
+        # Use connection pooling with timeout
+        timeout = aiohttp.ClientTimeout(total=60, connect=10)
+        connector = aiohttp.TCPConnector(limit=10, ttl_dns_cache=300)
+        
+        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+            try:
+                async with session.post(f"{self.base_url}/chat/completions", headers=headers, json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if data.get("choices") and len(data["choices"]) > 0:
+                            return data["choices"][0]["message"]["content"]
+                        raise Exception("OpenRouter: No choices in response")
+                    else:
+                        error_text = await resp.text()
+                        raise Exception(f"OpenRouter error: {resp.status} - {error_text}")
+            finally:
+                await connector.close()
 
 
 class GroqProvider(AIProvider):
@@ -71,17 +82,28 @@ class GroqProvider(AIProvider):
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            "max_tokens": 1024,
+            "temperature": 0.7
         }
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f"{self.base_url}/chat/completions", headers=headers, json=payload) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    return data["choices"][0]["message"]["content"]
-                else:
-                    error_text = await resp.text()
-                    raise Exception(f"Groq error: {resp.status} - {error_text}")
+        # Use connection pooling with timeout
+        timeout = aiohttp.ClientTimeout(total=60, connect=10)
+        connector = aiohttp.TCPConnector(limit=10, ttl_dns_cache=300)
+        
+        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+            try:
+                async with session.post(f"{self.base_url}/chat/completions", headers=headers, json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if data.get("choices") and len(data["choices"]) > 0:
+                            return data["choices"][0]["message"]["content"]
+                        raise Exception("Groq: No choices in response")
+                    else:
+                        error_text = await resp.text()
+                        raise Exception(f"Groq error: {resp.status} - {error_text}")
+            finally:
+                await connector.close()
 
 
 class HuggingFaceProvider(AIProvider):

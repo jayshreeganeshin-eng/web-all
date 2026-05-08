@@ -235,20 +235,29 @@ class InvisibleContentEngine:
         return False
     
     async def discover_sitemap_urls(self, base_url: str) -> List[str]:
-        """Discover URLs from sitemap.xml with caching."""
+        """Discover URLs from sitemap.xml with caching and improved error handling."""
         from urllib.parse import urljoin
         import aiohttp
         from bs4 import BeautifulSoup
+        import warnings
+        from bs4 import XMLParsedAsHTMLWarning
+        
+        # Suppress XML parsing warnings when using lxml for sitemaps
+        warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
         
         urls: List[str] = []
         sitemap_url = urljoin(base_url, "/sitemap.xml")
         
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(sitemap_url, timeout=10) as response:
+                async with session.get(sitemap_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     if response.status == 200:
                         text = await response.text()
-                        soup = BeautifulSoup(text, 'lxml')
+                        # Try XML parser first for sitemaps, fallback to lxml
+                        try:
+                            soup = BeautifulSoup(text, 'xml')
+                        except Exception:
+                            soup = BeautifulSoup(text, 'lxml')
                         
                         # Handle different sitemap formats
                         for loc in soup.find_all('loc'):
