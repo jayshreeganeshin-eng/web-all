@@ -19,7 +19,14 @@ def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="web-all",
-        description="Universal Website Cloner - Download visible and invisible content",
+        description="Universal Website Cloner v4.2.0 - Download visible and invisible content",
+    )
+    
+    # Add version argument
+    parser.add_argument(
+        "--version", 
+        action="version", 
+        version="web-all v4.2.0"
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")

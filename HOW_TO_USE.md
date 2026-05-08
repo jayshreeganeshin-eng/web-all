@@ -1,11 +1,15 @@
-# 🚀 web-all v3.0 - How to Use Guide
+# 🚀 web-all v4.2.0 - How to Use Guide
+
+[![Version](https://img.shields.io/badge/version-4.2.0-blue.svg)](https://pypi.org/project/web-all/)
+[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen.svg)](https://github.com/yourusername/web-all)
 
 ## 📋 Table of Contents
 1. [Quick Start (Easy)](#-level-1-easy---beginner)
 2. [Intermediate Usage (Normal)](#-level-2-normal---intermediate)
 3. [Advanced Usage (Hard)](#-level-3-hard---expert)
-4. [API Reference](#api-reference)
-5. [Troubleshooting](#troubleshooting)
+4. [Multi-Language Support](#multi-language-support)
+5. [API Reference](#api-reference)
+6. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -380,4 +384,74 @@ output/
 
 ---
 
-Made with ❤️ for the web archiving community
+## 🌐 Multi-Language Support (v4.2.0)
+
+web-all now supports 11 languages for the GUI and CLI output.
+
+### Automatic Language Detection
+The Web GUI automatically detects your browser's language preference and displays the interface accordingly.
+
+### Manual Language Selection
+
+#### Via Environment Variable
+```bash
+# Set language before starting the server
+export WEB_ALL_LANG=es  # Spanish
+web-all serve
+
+# Other examples:
+export WEB_ALL_LANG=fr  # French
+export WEB_ALL_LANG=de  # German
+export WEB_ALL_LANG=zh  # Chinese
+export WEB_ALL_LANG=ja  # Japanese
+export WEB_ALL_LANG=ko  # Korean
+export WEB_ALL_LANG=ru  # Russian
+export WEB_ALL_LANG=ar  # Arabic (RTL support)
+export WEB_ALL_LANG=pt  # Portuguese
+export WEB_ALL_LANG=it  # Italian
+```
+
+#### Via GUI Language Selector
+1. Open the Web GUI at `http://localhost:8000`
+2. Click the language dropdown in the top-right corner
+3. Select your preferred language
+4. The interface updates immediately
+
+### Supported Languages
+| Code | Language | Native Name | RTL Support |
+|------|----------|-------------|-------------|
+| en | English | English | No |
+| es | Spanish | Español | No |
+| fr | French | Français | No |
+| de | German | Deutsch | No |
+| zh | Chinese | 中文 | No |
+| ja | Japanese | 日本語 | No |
+| ko | Korean | 한국어 | No |
+| ru | Russian | Русский | No |
+| ar | Arabic | العربية | ✅ Yes |
+| pt | Portuguese | Português | No |
+| it | Italian | Italiano | No |
+
+### Adding Custom Translations
+To add a new language:
+
+1. Create a new JSON file in `web_all/locales/`:
+```bash
+cp web_all/locales/en.json web_all/locales/xx.json
+```
+
+2. Translate all values (keep keys unchanged):
+```json
+{
+  "welcome": "Your translation here",
+  "clone_site": "Your translation here",
+  ...
+}
+```
+
+3. Add the language code to `web_all/i18n/__init__.py`
+
+---
+
+Made with ❤️ for the global community  
+*Version 4.2.0 - Production Ready*

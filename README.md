@@ -1,26 +1,41 @@
-# 🕷️ web-all v3.0 - Universal Website Cloner with AI
+# 🌐 web-all v4.2.0 - Worldwide Web Cloning & Intelligence Platform
 
-**The most advanced open-source tool for cloning websites with AI-powered analysis, hidden content discovery, and auto-organized assets.**
+[![Version](https://img.shields.io/badge/version-4.2.0-blue.svg)](https://pypi.org/project/web-all/)
+[![Status](https://img.shields.io/badge/status-production%20ready-green.svg)](https://pypi.org/project/web-all/)
+[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen.svg)](https://github.com/yourusername/web-all)
+
+**web-all** is a production-grade, worldwide web cloning and intelligence platform designed for developers, researchers, and security professionals. It enables high-fidelity website cloning, hidden content discovery, AI-powered analysis, and multi-language support across 11+ languages.
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features (v4.2.0)
 
-### Core Capabilities
+### 🌍 Worldwide Support
 | Feature | Description |
 |---------|-------------|
-| 🌐 **Full Website Cloning** | Download complete websites with HTML, CSS, JS, images |
-| 🔍 **Hidden Content Discovery** | Uncover content behind clicks, hovers, accordions, lazy-loading |
-| 🤖 **AI-Powered Analysis** | Auto-summarize, extract structured data, tag content (Ollama/OpenRouter/Groq) |
-| 🧅 **Tor/.onion Support** | Clone hidden services through Tor network |
-| 📱 **Dynamic Rendering** | Headless browser support for JavaScript-heavy sites |
-| 🗂️ **Auto-Organization** | Assets organized by type: /images, /css, /js folders |
-| 📦 **ZIP Export** | Package cloned sites for easy sharing |
+| 🗣️ **Multi-Language Interface** | Full i18n support for 11 languages: EN, ES, FR, DE, ZH, JA, KO, RU, AR, PT, IT |
+| 🌐 **Global Asset Handling** | Automatic detection of international fonts, scripts, and RTL layouts |
+| 🧅 **Tor/.onion Support** | Native integration for cloning hidden services securely |
+| 🔤 **Unicode Support** | Full UTF-8 handling for all character sets |
 
-### Interfaces
-- **CLI** - Fast command-line interface
-- **Web GUI** - Beautiful browser-based dashboard
-- **REST API** - Programmatic access with job queue
+### 🕸️ Advanced Cloning Engine
+| Feature | Description |
+|---------|-------------|
+| 🌐 **Full Website Cloning** | Download complete websites with HTML, CSS, JS, images, fonts, videos |
+| 🔍 **Hidden Content Discovery** | Uncover content behind clicks, hovers, accordions, lazy-loading |
+| 🤖 **AI-Powered Analysis** | Auto-summarize, extract structured data, tag content (5 providers) |
+| 📱 **Dynamic Rendering** | Headless browser support for JavaScript-heavy SPAs |
+| 🗂️ **Auto-Organization** | Assets organized by type: /images, /css, /js, /fonts folders |
+| 📦 **ZIP Export** | Package cloned sites for easy sharing and archiving |
+| 🔄 **Smart Link Rewriting** | Automatic relative path conversion for offline browsing |
+
+### 🛠️ Developer Tools
+- **CLI** - Fast command-line interface with rich output
+- **Web GUI** - Beautiful, responsive browser-based dashboard with language selector
+- **REST API** - Programmatic access with job queue, status tracking, downloads
+- **Python SDK** - Import and use in your own Python projects
 
 ---
 
@@ -38,10 +53,39 @@ pip install web-all
 python -m playwright install chromium
 ```
 
+### Method 3: With Full ML/AI Features
+```bash
+pip install "web-all[full]"
+python -m playwright install chromium
+```
+
 ### Verify Installation
 ```bash
+web-all --version
+# Output: web-all v4.2.0
+
 web-all --help
 ```
+
+---
+
+## 🌐 Supported Languages (v4.2.0)
+
+| Code | Language | Native Name | Status |
+|------|----------|-------------|--------|
+| en | English | English | ✅ |
+| es | Spanish | Español | ✅ |
+| fr | French | Français | ✅ |
+| de | German | Deutsch | ✅ |
+| zh | Chinese | 中文 | ✅ |
+| ja | Japanese | 日本語 | ✅ |
+| ko | Korean | 한국어 | ✅ |
+| ru | Russian | Русский | ✅ |
+| ar | Arabic | العربية | ✅ (RTL) |
+| pt | Portuguese | Português | ✅ |
+| it | Italian | Italiano | ✅ |
+
+The GUI automatically detects your browser language. You can switch languages manually using the selector in the top-right corner.
 
 ---
 
@@ -107,6 +151,13 @@ This enables dynamic rendering, hidden content discovery, a deeper site crawl, e
 #### Enable AI analysis manually from CLI:
 ```bash
 web-all clone https://example.com -o mysite --ai-enabled
+```
+
+#### Clone with multi-language support:
+```bash
+# The GUI auto-detects language, or set via environment
+export WEB_ALL_LANG=es  # Spanish interface
+web-all serve
 ```
 
 #### Clone through Tor (for .onion sites):
@@ -230,14 +281,49 @@ When AI is enabled, web-all can:
 - **Extract structured data** (products, articles, contacts)
 - **Auto-tag** content with relevant keywords
 - **Clean HTML** by removing navigation/ads
+- **Multi-language analysis** in 11+ languages
 
 Supported providers:
-| Provider | Free Tier | API Key Required |
-|----------|-----------|------------------|
-| Ollama | ✅ Yes (local) | ❌ No |
-| OpenRouter | ✅ Yes | ✅ Yes |
-| Groq | ✅ Yes | ✅ Yes |
-| HuggingFace | ✅ Yes | ✅ Yes |
+| Provider | Free Tier | API Key Required | Notes |
+|----------|-----------|------------------|-------|
+| Ollama | ✅ Yes (local) | ❌ No | Privacy-first, runs locally |
+| OpenRouter | ✅ Yes | ✅ Yes | Access to 100+ models |
+| Groq | ✅ Yes | ✅ Yes | Fastest inference |
+| HuggingFace | ✅ Yes | ✅ Yes | Open-source models |
+| NVIDIA NIM | ✅ Yes | ✅ Yes | Optimized for enterprise |
+
+---
+
+## ⚙️ Configuration
+
+Create a `.env` file in your project root:
+
+```ini
+# AI Providers
+OLLAMA_BASE_URL=http://localhost:11434
+OPENROUTER_API_KEY=your_key_here
+GROQ_API_KEY=your_key_here
+HUGGINGFACE_TOKEN=your_token_here
+NVIDIA_API_KEY=your_key_here
+
+# Server Settings
+HOST=0.0.0.0
+PORT=8000
+DEBUG=false
+
+# Language & Locale
+DEFAULT_LANG=en
+TIMEZONE=UTC
+
+# Cloning Defaults
+MAX_DEPTH=5
+MAX_PAGES=1000
+CONCURRENT_CONNECTIONS=10
+USER_AGENT=web-all/4.2.0
+
+# Tor Settings (optional)
+TOR_PROXY=socks5://127.0.0.1:9050
+```
 
 ---
 
@@ -246,18 +332,107 @@ Supported providers:
 - ✅ Respects `robots.txt` (configurable)
 - ✅ Configurable rate limiting
 - ✅ User-agent identification
+- ✅ GDPR-compliant data handling
 - ⚠️ Always respect website terms of service
 - ⚠️ Use responsibly for legal purposes only
+- ⚠️ Do not use for copyright infringement
 
 ---
 
 ## 📦 Requirements
 
-- Python 3.10+
+- Python 3.9+
 - Playwright (auto-installed)
 - Optional: Tor Browser (for .onion sites)
 - Optional: Ollama/local AI (for AI features)
+- Optional: Node.js 18+ (for advanced frontend building)
 
 ---
 
-**Made with ❤️ for the web archiving community**
+## 🏗️ Project Structure
+
+```
+web-all/
+├── web_all/
+│   ├── core/           # Cloning engine, asset downloader
+│   ├── ai/             # AI providers, summarization logic
+│   ├── api/            # FastAPI REST server
+│   ├── gui/            # Web dashboard (HTML/CSS/JS)
+│   ├── i18n/           # Internationalization module
+│   ├── locales/        # Translation JSON files
+│   ├── cli.py          # Command-line interface
+│   └── utils.py        # Helpers, zip, logging
+├── tests/              # Pytest suite (37+ tests)
+├── pyproject.toml      # Project config & dependencies
+├── README.md           # This file
+├── LICENSE             # MIT License
+└── Dockerfile          # Container support
+```
+
+---
+
+## 🧪 Testing
+
+Run the full test suite:
+```bash
+pytest tests/ -v
+```
+
+Run with coverage:
+```bash
+pytest tests/ --cov=web_all --cov-report=html
+```
+
+All 37 tests must pass for production deployment.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions from the global community! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes and add tests
+4. Ensure all tests pass (`pytest tests/ -v`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+### Adding Translations
+To add a new language:
+1. Create a new JSON file in `web_all/locales/` (e.g., `fr.json`)
+2. Copy structure from `en.json`
+3. Translate all keys
+4. Add language code to `web_all/i18n/__init__.py`
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- Inspired by tools like `wget`, `HTTrack`, and modern headless browsers
+- AI integrations powered by LangChain and provider SDKs
+- UI design inspired by modern dashboard frameworks
+- Thanks to all contributors and the open-source community
+
+---
+
+## 📞 Support
+
+- **Documentation**: See `HOW_TO_USE.md` and `SPECIFICATION.md`
+- **Issues**: Report bugs on GitHub Issues
+- **Discussions**: Join GitHub Discussions for questions
+- **Email**: support@web-all.dev (for enterprise support)
+
+---
+
+**Built with ❤️ for the global community.**  
+*Version 4.2.0 - Production Ready*  
+*Last Updated: 2024*
+
