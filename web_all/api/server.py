@@ -20,7 +20,7 @@ from ..core.invisible import InvisibleContentEngine
 from ..utils.ai_engine import AIEngine, get_available_providers
 from ..utils.zip_utils import create_zip_archive
 
-app = FastAPI(title="web-all API", version="3.0.0")
+app = FastAPI(title="web-all API v4.2.0", version="4.2.0", description="Worldwide Website Cloner with Multi-Language Support & AI")
 
 # GUI directory used for serving the frontend at /
 GUI_DIR: Optional[str] = None
@@ -184,13 +184,29 @@ async def root():
         if index_file.exists():
             return FileResponse(str(index_file), media_type="text/html")
 
-    return {"message": "web-all API is running", "version": "3.0.0"}
+    return {
+        "message": "web-all v4.2.0 API is running", 
+        "version": "4.2.0",
+        "features": [
+            "Worldwide website cloning",
+            "Multi-language support (11 languages)",
+            "Tor/.onion support",
+            "AI integration (5 providers)",
+            "Hidden content discovery",
+            "Auto-organize assets",
+            "ZIP export"
+        ]
+    }
 
 
 @app.get("/api/v1/health")
 async def api_health():
     """API health check endpoint."""
-    return {"message": "web-all API is running", "version": "3.0.0"}
+    return {
+        "message": "web-all v4.2.0 API is running", 
+        "version": "4.2.0",
+        "status": "healthy"
+    }
 
 
 @app.post("/api/v1/clone")

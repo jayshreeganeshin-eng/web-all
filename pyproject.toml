@@ -4,21 +4,27 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "web-all"
-version = "3.0.0"
-description = "Universal Website Cloner with AI - Clone websites, discover hidden content, auto-organize assets"
+version = "4.2.0"
+description = "Universal Website Cloner with AI - Clone websites worldwide, discover hidden content, multi-language support, auto-organize assets"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [{name = "web-all Team", email = "team@web-all.dev"}]
-keywords = ["website", "cloner", "crawler", "scraper", "downloader", "archive", "mirror", "ai"]
+keywords = [
+    "website", "cloner", "crawler", "scraper", "downloader", "archive", 
+    "mirror", "ai", "tor", "onion", "multi-language", "i18n", "worldwide"
+]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 
 dependencies = [
@@ -30,10 +36,13 @@ dependencies = [
     "uvicorn>=0.27.0",
     "pydantic>=2.5.0",
     "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0.0", "pytest-asyncio>=0.21.0", "black>=24.0.0", "ruff>=0.1.0"]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "black>=24.0.0", "ruff>=0.1.0", "pytest-cov>=4.0.0"]
+full = ["torch>=2.0.0", "transformers>=4.30.0", "sentence-transformers>=2.2.0"]
 
 [project.scripts]
 web-all = "web_all.cli:main"
@@ -43,6 +52,7 @@ wa = "web_all.cli:main"
 Homepage = "https://github.com/web-all/web-all"
 Documentation = "https://github.com/web-all/web-all#readme"
 Repository = "https://github.com/web-all/web-all.git"
+Issues = "https://github.com/web-all/web-all/issues"
 
 [tool.setuptools]
 include-package-data = true
@@ -52,7 +62,7 @@ where = ["."]
 include = ["web_all*"]
 
 [tool.setuptools.package-data]
-"web_all" = ["gui/*"]
+"web_all" = ["gui/*", "locales/*/*.json"]
 
 [tool.black]
 line-length = 100
@@ -63,3 +73,8 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
