@@ -119,7 +119,8 @@ def _handle_clone(args):
     async def run():
         if args.everything:
             print(
-                "⚡ Running full everything capture: dynamic rendering, hidden content discovery, deeper crawl, and AI analysis"
+                "⚡ Running full everything capture: dynamic rendering, hidden content "
+                "discovery, deeper crawl, and AI analysis"
             )
             args.dynamic = True
             args.discover_invisible = True

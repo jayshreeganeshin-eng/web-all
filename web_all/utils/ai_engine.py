@@ -223,7 +223,9 @@ Content:
         try:
             return await self.provider.generate(
                 prompt,
-                system_prompt="You are a web content analyzer. Provide clear, structured summaries.",
+                system_prompt=(
+                    "You are a web content analyzer. Provide clear, structured summaries."
+                ),
             )
         except Exception as e:
             print(f"AI summarization failed: {e}")
@@ -308,10 +310,12 @@ Return only comma-separated tags, no explanations."""
             text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
             return text
 
-        prompt = f"""Clean this HTML by removing navigation menus, advertisements, footers, and other non-content elements. Keep only the main article/content. Return clean HTML.
-
-HTML:
-{html_content[:3000]}"""
+        prompt = (
+            "Clean this HTML by removing navigation menus, advertisements, footers, "
+            "and other non-content elements. Keep only the main article/content. "
+            "Return clean HTML.\n\n"
+            f"HTML:\n{html_content[:3000]}"
+        )
 
         try:
             return await self.provider.generate(
@@ -377,9 +381,8 @@ HTML:
                     f.write(f"## Summary\n{results['summary']}\n\n")
                     f.write(f"## Tags\n{', '.join(results['tags'])}\n\n")
                     if results["structured_data"]:
-                        f.write(
-                            f"## Structured Data\n```json\n{json.dumps(results['structured_data'], indent=2)}\n```\n"
-                        )
+                        structured_json = json.dumps(results["structured_data"], indent=2)
+                        f.write(f"## Structured Data\n```json\n{structured_json}\n```\n")
 
             print(f"✅ AI analysis complete! Saved to {output_dir}")
 

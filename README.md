@@ -18,7 +18,7 @@
 | 📦 **ZIP Export** | Package cloned sites for easy sharing |
 
 ### Interfaces
-- **CLI** - Fast command-line interface
+- **CLI** - Fast command-line interface (`web-all` or `wa` shortcut)
 - **Web GUI** - Beautiful browser-based dashboard
 - **REST API** - Programmatic access with job queue
 
@@ -26,21 +26,192 @@
 
 ## 🚀 Installation
 
-### Method 1: Quick Install (Recommended)
+### Method 1: Local Installation from Source (Recommended for Development)
+
+**Step 1: Clone the repository**
+```bash
+git clone https://github.com/web-all/web-all.git
+cd web-all
+```
+
+**Step 2: Install in editable mode**
 ```bash
 pip install -e .
-python -m playwright install chromium
 ```
 
-### Method 2: From PyPI
+**Step 3: Install Playwright browsers**
 ```bash
-pip install web-all
 python -m playwright install chromium
+# Optional: install all browsers
+python -m playwright install
 ```
 
-### Verify Installation
+**Step 4: Verify installation**
 ```bash
 web-all --help
+# or use the shortcut
+wa --help
+```
+
+---
+
+### Method 2: Install from PyPI (Production Use)
+
+**Step 1: Install from PyPI**
+```bash
+pip install web-all
+```
+
+**Step 2: Install Playwright browsers**
+```bash
+python -m playwright install chromium
+```
+
+**Step 3: Verify installation**
+```bash
+web-all --help
+```
+
+---
+
+### Method 3: Docker Deployment
+
+**Option A: Using docker-compose (Recommended)**
+```bash
+# Clone the repository
+git clone https://github.com/web-all/web-all.git
+cd web-all
+
+# Start all services (web-all + optional Ollama AI)
+docker-compose up -d
+
+# Access GUI at http://localhost:8000
+```
+
+**Option B: Using Docker directly**
+```bash
+# Build and run
+docker build -t web-all .
+docker run -p 8000:8000 -v $(pwd)/output:/app/output web-all
+```
+
+---
+
+### Method 4: Online/Cloud Deployment
+
+#### Deploy to Hugging Face Spaces
+```bash
+# Create a new Space on huggingface.co/spaces
+# Select Docker as the SDK
+# Push your code to the space
+git remote add hf https://huggingface.co/spaces/YOUR_USERNAME/web-all
+git push hf main
+```
+
+#### Deploy to Railway
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login and deploy
+railway login
+railway init
+railway up
+```
+
+#### Deploy to Render
+1. Create a new Web Service on render.com
+2. Connect your GitHub repository
+3. Set build command: `pip install -e . && python -m playwright install chromium`
+4. Set start command: `web-all serve --host 0.0.0.0 --port $PORT`
+
+#### Deploy to Google Cloud Run
+```bash
+# Build container
+gcloud builds submit --tag gcr.io/PROJECT_ID/web-all
+
+# Deploy
+gcloud run deploy web-all \
+  --image gcr.io/PROJECT_ID/web-all \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --port 8000
+```
+
+#### Deploy to AWS ECS/Fargate
+```bash
+# Build and push to ECR
+aws ecr get-login-password --region region | docker login --username AWS --password-stdin account.dkr.ecr.region.amazonaws.com
+docker build -t web-all .
+docker tag web-all:latest account.dkr.ecr.region.amazonaws.com/web-all:latest
+docker push account.dkr.ecr.region.amazonaws.com/web-all:latest
+```
+
+---
+
+### Post-Installation Setup
+
+#### Configure AI Providers (Optional)
+
+**For Ollama (Local AI - Free):**
+```bash
+# Install Ollama from https://ollama.ai
+ollama pull llama3
+
+# web-all will auto-detect Ollama on localhost:11434
+```
+
+**For OpenRouter:**
+```bash
+# Get API key from https://openrouter.ai
+export OPENROUTER_API_KEY="your-api-key"
+```
+
+**For Groq:**
+```bash
+# Get API key from https://groq.com
+export GROQ_API_KEY="your-api-key"
+```
+
+#### Configure Tor (Optional)
+```bash
+# Install Tor
+# Ubuntu/Debian:
+sudo apt install tor
+
+# Start Tor service
+sudo systemctl start tor
+
+# web-all will auto-detect Tor proxy on socks5://127.0.0.1:9050
+```
+
+---
+
+### Troubleshooting Installation
+
+**Issue: `web-all: command not found`**
+```bash
+# Ensure pip bin directory is in PATH
+export PATH="$HOME/.local/bin:$PATH"
+# Or reinstall with:
+pip install --user -e .
+```
+
+**Issue: Playwright browser installation fails**
+```bash
+# Install system dependencies first
+# Ubuntu/Debian:
+sudo apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
+
+# Then install browsers:
+python -m playwright install chromium
+```
+
+**Issue: Port 8000 already in use**
+```bash
+# Use a different port
+web-all serve --port 8080
 ```
 
 ---
@@ -52,6 +223,8 @@ web-all --help
 #### Clone a website with one command:
 ```bash
 web-all clone https://example.com -o mysite
+# or use shortcut
+wa clone https://example.com -o mysite
 ```
 
 #### Start the Web GUI:
@@ -119,6 +292,11 @@ web-all clone http://example.onion -o onion_site --tor
 web-all serve --no-gui --port 8080
 ```
 
+#### Specify custom host and port:
+```bash
+web-all serve --host 0.0.0.0 --port 8080
+```
+
 ---
 
 ### 🔴 Level 3: Advanced (Expert)
@@ -154,15 +332,57 @@ curl -X POST http://localhost:8000/api/v1/ai/config \
 
 #### Programmatic usage in Python:
 ```python
+import asyncio
 from web_all import SiteCloner, InvisibleContentEngine
 
-# Clone a site
-cloner = SiteCloner(output_dir="./output", depth=3)
-await cloner.clone_site("https://example.com")
+async def main():
+    # Clone a site
+    cloner = SiteCloner(output_dir="./output", depth=3)
+    await cloner.clone_site("https://example.com")
+    
+    # Discover hidden content
+    engine = InvisibleContentEngine()
+    expanded_html = await engine.expand_all_content("https://example.com")
+    print(expanded_html)
 
-# Discover hidden content
-engine = InvisibleContentEngine()
-expanded_html = await engine.expand_all_content("https://example.com")
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+#### Advanced CLI options combination:
+```bash
+# Full production clone with all features
+web-all clone https://example.com \
+  -o production_clone \
+  -d 10 \
+  -c 20 \
+  --delay 0.5 \
+  --dynamic \
+  --discover-invisible \
+  --ai-enabled \
+  --max-pages 1000
+```
+
+#### Clone with custom user agent:
+```bash
+# Set via environment variable
+export USER_AGENT="Mozilla/5.0 (compatible; MyBot/1.0)"
+web-all clone https://example.com -o mysite
+```
+
+#### Batch cloning multiple sites:
+```bash
+# Create a sites.txt file with URLs
+cat > sites.txt << EOF
+https://example1.com
+https://example2.com
+https://example3.com
+EOF
+
+# Clone all sites
+while read url; do
+  web-all clone "$url" -o "clone_$(echo $url | sed 's|https\?://||' | sed 's|/.*||')"
+done < sites.txt
 ```
 
 ---
