@@ -73,10 +73,11 @@ def main():
 
 def _handle_clone(args):
     """Handle clone command."""
+    from urllib.parse import urlparse
+
     from .core.cloner import SiteCloner
     from .core.invisible import InvisibleContentEngine
     from .utils.ai_engine import AIEngine
-    from urllib.parse import urlparse
 
     try:
         _validate_url(args.url)
@@ -140,9 +141,10 @@ def _handle_clone(args):
 
 def _handle_images(args):
     """Handle images command."""
-    from .core.cloner import SiteCloner
-    from bs4 import BeautifulSoup
     import aiohttp
+    from bs4 import BeautifulSoup
+
+    from .core.cloner import SiteCloner
 
     print(f"📸 Downloading images from {args.url}...")
 
@@ -180,9 +182,11 @@ def _handle_images(args):
 
 def _handle_text(args):
     """Handle text command."""
-    from .core.cloner import SiteCloner
-    from bs4 import BeautifulSoup
     from urllib.parse import urlparse
+
+    from bs4 import BeautifulSoup
+
+    from .core.cloner import SiteCloner
 
     print(f"📝 Extracting text from {args.url}...")
 
@@ -214,8 +218,9 @@ def _handle_text(args):
 
 def _handle_serve(args):
     """Handle serve command."""
-    from .api.server import start_api
     from pathlib import Path
+
+    from .api.server import start_api
 
     gui_dir = None if args.no_gui else str(Path(__file__).parent / "gui")
     print(f"🌐 Starting web-all server on http://{args.host}:{args.port}")
