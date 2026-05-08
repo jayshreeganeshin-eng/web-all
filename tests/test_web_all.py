@@ -22,7 +22,32 @@ class TestSiteCloner:
     def cloner(self, tmp_path):
         """Create a SiteCloner instance with temporary output directory."""
         from web_all.core.cloner import SiteCloner
-        return SiteCloner(output_dir=str(tmp_path), depth=1, concurrency=2)
+        cloner = SiteCloner(output_dir=str(tmp_path), depth=1, concurrency=2)
+        # Initialize mock session for tests that need it
+        return cloner
+    
+    @pytest.fixture
+    def cloner_with_mock_session(self, tmp_path):
+        """Create a SiteCloner with mocked aiohttp session."""
+        from web_all.core.cloner import SiteCloner
+        from unittest.mock import AsyncMock, patch
+        
+        cloner = SiteCloner(output_dir=str(tmp_path), depth=1, concurrency=2)
+        
+        # Create proper async context manager mock
+        mock_html = "<html><body>Test</body></html>"
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(return_value=mock_html)
+        mock_response.read = AsyncMock(return_value=mock_html.encode())
+        
+        mock_session = AsyncMock()
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+        
+        cloner._session = mock_session
+        cloner._session.closed = False
+        
+        return cloner
     
     def test_init_default_values(self, tmp_path):
         """Test initialization with default values."""
@@ -32,7 +57,7 @@ class TestSiteCloner:
         
         assert cloner.depth == 2
         assert cloner.concurrency == 5
-        assert cloner.delay == 0.5
+        assert cloner.delay == 0.3  # Updated default delay
         assert cloner.timeout == 30
         assert cloner.use_tor is False
         assert cloner.download_all_assets is True
@@ -100,12 +125,17 @@ class TestSiteCloner:
     @pytest.mark.asyncio
     async def test_fetch_page_success(self, cloner):
         """Test successful page fetch."""
-        with patch.object(cloner.session, 'get') as mock_get:
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.text = "<html><body>Test</body></html>"
-            mock_get.return_value = mock_response
-            
+        mock_html = "<html><body>Test</body></html>"
+        
+        # Mock the _get_session method
+        mock_session = AsyncMock()
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(return_value=mock_html)
+        mock_response.read = AsyncMock(return_value=mock_html.encode())
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+        
+        with patch.object(cloner, '_get_session', return_value=mock_session):
             html = await cloner.fetch_page("https://example.com")
             
             assert html is not None
@@ -114,11 +144,13 @@ class TestSiteCloner:
     @pytest.mark.asyncio
     async def test_fetch_page_failure(self, cloner):
         """Test page fetch failure."""
-        with patch.object(cloner.session, 'get') as mock_get:
-            mock_response = MagicMock()
-            mock_response.status_code = 404
-            mock_get.return_value = mock_response
-            
+        # Mock the _get_session method
+        mock_session = AsyncMock()
+        mock_response = AsyncMock()
+        mock_response.status = 404
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+        
+        with patch.object(cloner, '_get_session', return_value=mock_session):
             html = await cloner.fetch_page("https://example.com/notfound")
             
             assert html is None
@@ -491,13 +523,16 @@ class TestPerformance:
             depth=0
         )
         
-        # Mock the session to avoid actual network calls
-        with patch.object(cloner.session, 'get') as mock_get:
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_response.text = "<html><body>Test</body></html>"
-            mock_get.return_value = mock_response
-            
+        # Mock the _get_session method to avoid actual network calls
+        mock_html = "<html><body>Test</body></html>"
+        mock_session = AsyncMock()
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(return_value=mock_html)
+        mock_response.read = AsyncMock(return_value=mock_html.encode())
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+        
+        with patch.object(cloner, '_get_session', return_value=mock_session):
             import time
             start = time.time()
             

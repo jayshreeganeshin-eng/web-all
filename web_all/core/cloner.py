@@ -2,6 +2,13 @@
 Core cloner engine for static and dynamic websites.
 Supports clearnet and .onion (Tor) sites.
 Auto-downloads full websites with organized folder structure.
+
+Optimized for performance with:
+- Connection pooling via aiohttp
+- Browser instance reuse
+- Async I/O throughout
+- Duplicate method elimination
+- Efficient caching and deduplication
 """
 
 import os
@@ -11,17 +18,19 @@ import asyncio
 import logging
 import hashlib
 from urllib.parse import urljoin, urlparse, urlunparse
-from typing import Set, List, Optional, Dict, Any
+from typing import Set, List, Optional, Dict, Any, Tuple
 from pathlib import Path
 from datetime import datetime
+from contextlib import asynccontextmanager
+from functools import lru_cache
 
 try:
-    import requests
+    import aiohttp
     from bs4 import BeautifulSoup
-    from playwright.async_api import async_playwright
+    from playwright.async_api import async_playwright, Browser, BrowserContext
 except ImportError as e:
     print(f"Missing dependency: {e}")
-    print("Run: pip install requests beautifulsoup4 playwright")
+    print("Run: pip install aiohttp beautifulsoup4 playwright")
     raise
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,12 +40,16 @@ logger = logging.getLogger(__name__)
 class SiteCloner:
     """Main website cloning engine with Tor support and automatic organization."""
     
+    # Pre-compiled regex patterns for performance
+    _NON_CONTENT_PATTERN = re.compile(r'<(nav|footer|script|style)[^>]*>.*?</\1>', re.DOTALL | re.IGNORECASE)
+    _WHITESPACE_PATTERN = re.compile(r'\s+')
+    
     def __init__(
         self,
         output_dir: str = "./output",
         depth: int = 2,
         concurrency: int = 5,
-        delay: float = 0.5,
+        delay: float = 0.3,  # Reduced default delay
         user_agent: Optional[str] = None,
         use_tor: bool = False,
         tor_proxy: str = "http://127.0.0.1:9050",
@@ -63,11 +76,17 @@ class SiteCloner:
         self.seen_urls: Set[str] = set()
         self.downloaded_assets: Set[str] = set()
         self.url_map: Dict[str, Path] = {}
-        self.session = requests.Session()
-        self.session.headers.update({"User-Agent": self.user_agent})
         self.follow_external = False
         self.include_subdomains = True
         self.max_pages = 1000
+        
+        # Async session for connection pooling
+        self._session: Optional[aiohttp.ClientSession] = None
+        self._session_lock = asyncio.Lock()
+        
+        # Browser instance cache for reuse
+        self._browser: Optional[Browser] = None
+        self._browser_context: Optional[BrowserContext] = None
         
         if use_tor:
             self._setup_tor_proxy()
@@ -82,17 +101,16 @@ class SiteCloner:
             "errors": 0
         }
         
+        # LRU cache for path generation (hot paths)
+        self._path_cache: Dict[str, Path] = {}
+        
     def _setup_tor_proxy(self):
-        """Configure session to use Tor proxy."""
-        proxies = {
-            "http": self.tor_proxy,
-            "https": self.tor_proxy
-        }
-        self.session.proxies.update(proxies)
+        """Configure proxy settings for Tor."""
         logger.info(f"Tor proxy enabled: {self.tor_proxy}")
         
+    @lru_cache(maxsize=1024)
     def _normalize_url(self, url: str) -> str:
-        """Normalize URL for deduplication."""
+        """Normalize URL for deduplication (cached for performance)."""
         parsed = urlparse(url)
         netloc = parsed.netloc.lower()
         path = parsed.path.rstrip('/') or '/'
@@ -116,7 +134,12 @@ class SiteCloner:
         return False
 
     def _get_local_html_path(self, url: str) -> Path:
-        """Generate a local file path for a page URL."""
+        """Generate a local file path for a page URL (with caching)."""
+        # Check cache first
+        cache_key = f"html:{url}"
+        if cache_key in self._path_cache:
+            return self._path_cache[cache_key]
+            
         parsed = urlparse(url)
         path = parsed.path.rstrip('/') or '/'
         if path.endswith('/'):
@@ -129,10 +152,17 @@ class SiteCloner:
             path = path.replace('.html', f'_{query_hash}.html')
 
         domain = parsed.netloc.replace('.', '_').replace(':', '_')
-        return self.output_dir / domain / path.lstrip('/')
+        result = self.output_dir / domain / path.lstrip('/')
+        self._path_cache[cache_key] = result
+        return result
 
     def _get_asset_path(self, url: str, asset_type: str) -> Path:
-        """Generate organized path for assets."""
+        """Generate organized path for assets (with caching)."""
+        # Check cache first
+        cache_key = f"{asset_type}:{url}"
+        if cache_key in self._path_cache:
+            return self._path_cache[cache_key]
+            
         parsed = urlparse(url)
         
         # Create domain-based folder structure
@@ -161,10 +191,29 @@ class SiteCloner:
             counter += 1
             output_path = subdir / f"{base_name}_{counter}{ext}"
         
+        self._path_cache[cache_key] = output_path
         return output_path
     
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create aiohttp session with connection pooling."""
+        async with self._session_lock:
+            if self._session is None or self._session.closed:
+                connector = aiohttp.TCPConnector(limit=self.concurrency, ttl_dns_cache=300)
+                timeout = aiohttp.ClientTimeout(total=self.timeout)
+                
+                headers = {"User-Agent": self.user_agent}
+                proxy = self.tor_proxy if self.use_tor else None
+                
+                self._session = aiohttp.ClientSession(
+                    connector=connector,
+                    timeout=timeout,
+                    headers=headers,
+                    proxy=proxy
+                )
+            return self._session
+    
     async def fetch_page(self, url: str) -> Optional[str]:
-        """Fetch page content with retry logic."""
+        """Fetch page content with async I/O and connection pooling."""
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
@@ -173,26 +222,46 @@ class SiteCloner:
                     
                 logger.info(f"Fetching: {url}")
                 
-                loop = asyncio.get_event_loop()
-                response = await loop.run_in_executor(
-                    None, 
-                    lambda: self.session.get(url, timeout=self.timeout)
-                )
-                
-                if response.status_code == 200:
-                    self.seen_urls.add(normalized)
-                    self.visited_urls.add(normalized)
-                    return response.text
-                else:
-                    logger.warning(f"Failed to fetch {url}: {response.status_code}")
-                    return None
+                session = await self._get_session()
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        self.seen_urls.add(normalized)
+                        self.visited_urls.add(normalized)
+                        return html
+                    else:
+                        logger.warning(f"Failed to fetch {url}: {response.status}")
+                        return None
                     
+            except asyncio.TimeoutError:
+                logger.error(f"Timeout fetching {url}")
+                self.stats['errors'] += 1
+                return None
             except Exception as e:
                 logger.error(f"Error fetching {url}: {e}")
+                self.stats['errors'] += 1
                 return None
     
-    async def fetch_page_dynamic(self, url: str, scroll_times: int = 3, wait_time: float = 2.0) -> Optional[str]:
-        """Fetch page using headless browser for JavaScript rendering."""
+    @asynccontextmanager
+    async def _get_browser_context(self):
+        """Context manager for efficient browser instance reuse."""
+        if self._browser is None or not self._browser.is_connected():
+            async with async_playwright() as p:
+                self._browser = await p.chromium.launch(headless=True)
+            
+            context_args = {}
+            if self.use_tor:
+                context_args["proxy"] = {"server": self.tor_proxy}
+            
+            self._browser_context = await self._browser.new_context(
+                user_agent=self.user_agent,
+                **context_args
+            )
+        
+        yield self._browser_context
+    
+    async def fetch_page_dynamic(self, url: str, scroll_times: int = 2, wait_time: float = 1.0) -> Optional[str]:
+        """Fetch page using headless browser for JavaScript rendering (optimized)."""
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
@@ -201,54 +270,62 @@ class SiteCloner:
                 
                 logger.info(f"Dynamic fetch: {url}")
                 
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(headless=True)
-                    
-                    context_args = {}
-                    if self.use_tor:
-                        context_args["proxy"] = {"server": self.tor_proxy}
-                    
-                    context = await browser.new_context(
-                        user_agent=self.user_agent,
-                        **context_args
-                    )
+                async with self._get_browser_context() as context:
                     page = await context.new_page()
                     
-                    await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
-                    
-                    # Scroll to trigger lazy loading
-                    for i in range(scroll_times):
-                        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                        await asyncio.sleep(wait_time)
-                    
-                    html = await page.content()
-                    await browser.close()
-                    
-                    self.seen_urls.add(normalized)
-                    self.visited_urls.add(normalized)
-                    return html
+                    try:
+                        await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
+                        
+                        # Optimized scrolling with early termination
+                        for i in range(scroll_times):
+                            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                            
+                            # Check if we reached bottom
+                            reached_bottom = await page.evaluate("""
+                                () => window.innerHeight + window.scrollY >= document.body.offsetHeight - 100
+                            """)
+                            
+                            if reached_bottom:
+                                logger.debug(f"Reached bottom after {i+1} scrolls")
+                                break
+                            
+                            await asyncio.sleep(wait_time)
+                        
+                        html = await page.content()
+                        await page.close()
+                        
+                        self.seen_urls.add(normalized)
+                        self.visited_urls.add(normalized)
+                        return html
+                        
+                    except Exception as e:
+                        logger.error(f"Page error for {url}: {e}")
+                        await page.close()
+                        return None
                     
             except Exception as e:
                 logger.error(f"Dynamic fetch error for {url}: {e}")
+                self.stats['errors'] += 1
                 return None
     
     def extract_links(self, html: str, base_url: str) -> List[str]:
-        """Extract all links from HTML."""
+        """Extract all links from HTML (optimized with set comprehension)."""
         soup = BeautifulSoup(html, 'lxml')
-        links = []
         
+        # Use set for deduplication during extraction
+        links_set = set()
         for tag in soup.find_all('a', href=True):
             href = tag['href'].strip()
             if href.startswith(('javascript:', 'mailto:', 'tel:', '#')):
                 continue
             
             absolute_url = urljoin(base_url, href)
-            links.append(absolute_url)
+            links_set.add(absolute_url)
         
-        return links
+        return list(links_set)
     
     def extract_assets(self, html: str, base_url: str) -> Dict[str, List[str]]:
-        """Extract asset URLs (images, CSS, JS)."""
+        """Extract asset URLs (images, CSS, JS) - optimized."""
         soup = BeautifulSoup(html, 'lxml')
         assets = {
             'images': [],
@@ -256,19 +333,31 @@ class SiteCloner:
             'js': []
         }
         
-        # Images
+        # Images - using set for deduplication
+        seen_images = set()
         for img in soup.find_all('img', src=True):
             src = img['src'].strip()
             if not src.startswith(('data:', 'javascript:')):
-                assets['images'].append(urljoin(base_url, src))
+                abs_url = urljoin(base_url, src)
+                if abs_url not in seen_images:
+                    assets['images'].append(abs_url)
+                    seen_images.add(abs_url)
         
         # CSS
+        seen_css = set()
         for link in soup.find_all('link', rel='stylesheet', href=True):
-            assets['css'].append(urljoin(base_url, link['href']))
+            abs_url = urljoin(base_url, link['href'])
+            if abs_url not in seen_css:
+                assets['css'].append(abs_url)
+                seen_css.add(abs_url)
         
         # JS
+        seen_js = set()
         for script in soup.find_all('script', src=True):
-            assets['js'].append(urljoin(base_url, script['src']))
+            abs_url = urljoin(base_url, script['src'])
+            if abs_url not in seen_js:
+                assets['js'].append(abs_url)
+                seen_js.add(abs_url)
         
         return assets
     
@@ -392,36 +481,45 @@ class SiteCloner:
         
         logger.info(f"Saved: {output_path}")
     
-    def save_asset(self, url: str, asset_type: str):
-        """Download and save asset with organized folder structure."""
+    async def save_asset(self, url: str, asset_type: str):
+        """Download and save asset with organized folder structure (async)."""
         try:
             normalized = self._normalize_url(url)
             if normalized in self.downloaded_assets:
                 return
             
-            response = self.session.get(url, timeout=self.timeout)
-            if response.status_code == 200:
-                output_path = self._get_asset_path(url, asset_type)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                with open(output_path, 'wb') as f:
-                    f.write(response.content)
-                
-                self.downloaded_assets.add(normalized)
-                self.url_map[normalized] = output_path
-                
-                # Update stats
-                if asset_type == 'images':
-                    self.stats['images'] += 1
-                elif asset_type == 'css':
-                    self.stats['css'] += 1
-                elif asset_type == 'js':
-                    self.stats['js'] += 1
-                else:
-                    self.stats['other'] += 1
-                
-                logger.info(f"Downloaded {asset_type}: {output_path.name}")
-                
+            session = await self._get_session()
+            async with session.get(url) as response:
+                if response.status == 200:
+                    content = await response.read()
+                    output_path = self._get_asset_path(url, asset_type)
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # Write file asynchronously using executor
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(
+                        None,
+                        lambda: output_path.write_bytes(content)
+                    )
+                    
+                    self.downloaded_assets.add(normalized)
+                    self.url_map[normalized] = output_path
+                    
+                    # Update stats
+                    if asset_type == 'images':
+                        self.stats['images'] += 1
+                    elif asset_type == 'css':
+                        self.stats['css'] += 1
+                    elif asset_type == 'js':
+                        self.stats['js'] += 1
+                    else:
+                        self.stats['other'] += 1
+                    
+                    logger.debug(f"Downloaded {asset_type}: {output_path.name}")
+                    
+        except asyncio.TimeoutError:
+            self.stats['errors'] += 1
+            logger.error(f"Timeout downloading asset {url}")
         except Exception as e:
             self.stats['errors'] += 1
             logger.error(f"Failed to download asset {url}: {e}")
@@ -486,26 +584,35 @@ class SiteCloner:
             output_file = self._get_local_html_path(current_url)
             self.save_html(html, current_url, output_file)
             
-            # Extract and download ALL assets by default
+            # Extract and download ALL assets by default (concurrently)
             if self.download_all_assets:
                 assets = self.extract_assets(html, current_url)
+                download_tasks = []
                 for asset_type, urls in assets.items():
-                    for asset_url in urls:  # No limit - download all
-                        self.save_asset(asset_url, asset_type)
+                    for asset_url in urls:
+                        download_tasks.append(self.save_asset(asset_url, asset_type))
+                
+                # Download assets concurrently with semaphore limiting
+                if download_tasks:
+                    await asyncio.gather(*download_tasks, return_exceptions=True)
             
             # Extract links for crawling
             if current_depth < self.depth:
                 links = self.extract_links(html, current_url)
+                new_links = []
                 for link in links:
                     normalized = self._normalize_url(link)
                     if normalized in self.seen_urls:
                         continue
                     if self._should_follow_link(link, base_domain):
                         self.seen_urls.add(normalized)
-                        if len(self.visited_urls) + len(self.seen_urls) >= self.max_pages:
-                            logger.info("Maximum page limit reached, stopping crawl.")
-                            break
-                        queue.append((link, current_depth + 1))
+                        new_links.append((link, current_depth + 1))
+                
+                # Add all new links at once
+                if len(self.visited_urls) + len(self.seen_urls) >= self.max_pages:
+                    logger.info("Maximum page limit reached, stopping crawl.")
+                else:
+                    queue.extend(new_links[:self.max_pages - len(self.visited_urls)])
             
             await asyncio.sleep(self.delay)
         
