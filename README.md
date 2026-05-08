@@ -1,4 +1,4 @@
-# 🕷️ web-all v3.0 - Universal Website Cloner with AI
+# 🕷️ web-all v4.0 - Universal Website Cloner with AI
 
 **The most advanced open-source tool for cloning websites with AI-powered analysis, hidden content discovery, and auto-organized assets.**
 
@@ -26,17 +26,49 @@
 
 ## 🚀 Installation
 
-### Method 1: Quick Install (Recommended)
+### Quick Install for Kubuntu/Ubuntu (Recommended)
+
+**One-command installation with automatic virtual environment:**
+
 ```bash
+cd web-all
+./install.sh
+```
+
+This will:
+- Create a Python virtual environment (`.venv`)
+- Install all dependencies
+- Set up Playwright browser (if disk space allows)
+- Provide quick start instructions
+
+**After installation, use either method:**
+
+```bash
+# Method 1: Activate the virtual environment
+source .venv/bin/activate
+web-all clone https://example.com --output ./mycopy
+
+# Method 2: Run directly without activation
+.venv/bin/web-all clone https://example.com --output ./mycopy
+```
+
+### Manual Installation
+
+#### Method 1: Using pip with virtual environment (Recommended)
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e .
 python -m playwright install chromium
 ```
 
-### Method 2: From PyPI
+#### Method 2: System-wide (not recommended on Ubuntu/Kubuntu 24.04+)
 ```bash
-pip install web-all
+pip install -e . --break-system-packages
 python -m playwright install chromium
 ```
+
+> **Note:** On Ubuntu/Kubuntu 24.04+, PEP 668 prevents system-wide pip installations. Use the virtual environment method or the `./install.sh` script.
 
 ### Verify Installation
 ```bash
