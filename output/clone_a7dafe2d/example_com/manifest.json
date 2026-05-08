@@ -1,0 +1,29 @@
+{
+  "start_url": "https://example.com",
+  "base_domain": "example.com",
+  "mode": "static",
+  "use_tor": false,
+  "timestamp": "2026-05-08T19:21:00.512317",
+  "settings": {
+    "depth": 2,
+    "effective_depth": 2,
+    "concurrency": 5,
+    "delay": 0.5,
+    "auto_organize": true,
+    "download_all_assets": true,
+    "max_pages": 1000,
+    "follow_external": false,
+    "include_subdomains": true
+  },
+  "visited_count": 1,
+  "assets_count": 0,
+  "stats": {
+    "pages": 1,
+    "images": 0,
+    "css": 0,
+    "js": 0,
+    "other": 0,
+    "errors": 0
+  },
+  "output_directory": "output/clone_a7dafe2d/example_com"
+}

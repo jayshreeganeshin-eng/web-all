@@ -13,31 +13,23 @@ env/
 .env.local
 .env.*
 
-# Logs
+# Logs and temp files
 *.log
-
-# Temporary files
 *.tmp
 *.swp
-*.swo
 
-# Build artifacts
-dist/
-build/
-.coverage
-htmlcov/
-coverage/
-
-# IDE
+# Editors
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
 
-# OS
-.DS_Store
-Thumbs.db
+# Coverage
+.coverage
+coverage/
+htmlcov/
 
 # MyPy
 .mypy_cache/
+
+# Pytest
+.pytest_cache/
 ```
