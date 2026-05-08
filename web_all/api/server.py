@@ -182,7 +182,7 @@ async def create_clone_job(request: CloneRequest, background_tasks: BackgroundTa
     
     jobs[job_id] = {
         "id": job_id,
-        "request": request.dict(),
+        "request": request.model_dump(),
         "status": "queued",
         "created_at": datetime.now().isoformat()
     }

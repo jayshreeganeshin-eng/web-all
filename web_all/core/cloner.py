@@ -28,19 +28,30 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
+# Constants
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+DEFAULT_TOR_PROXY = "http://127.0.0.1:9050"
+DEFAULT_TIMEOUT = 30
+DEFAULT_CONCURRENCY = 5
+DEFAULT_DELAY = 0.5
+DEFAULT_DEPTH = 2
+MAX_PAGES = 1000
+ASSET_TYPES = {'images', 'css', 'js'}
+
+
 class SiteCloner:
     """Main website cloning engine with Tor support and automatic organization."""
     
     def __init__(
         self,
         output_dir: str = "./output",
-        depth: int = 2,
-        concurrency: int = 5,
-        delay: float = 0.5,
+        depth: int = DEFAULT_DEPTH,
+        concurrency: int = DEFAULT_CONCURRENCY,
+        delay: float = DEFAULT_DELAY,
         user_agent: Optional[str] = None,
         use_tor: bool = False,
-        tor_proxy: str = "http://127.0.0.1:9050",
-        timeout: int = 30,
+        tor_proxy: str = DEFAULT_TOR_PROXY,
+        timeout: int = DEFAULT_TIMEOUT,
         respect_robots: bool = False,
         auto_organize: bool = True,
         download_all_assets: bool = True,
@@ -50,7 +61,7 @@ class SiteCloner:
         self.depth = depth
         self.concurrency = concurrency
         self.delay = delay
-        self.user_agent = user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        self.user_agent = user_agent or DEFAULT_USER_AGENT
         self.use_tor = use_tor
         self.tor_proxy = tor_proxy
         self.timeout = timeout
@@ -67,7 +78,7 @@ class SiteCloner:
         self.session.headers.update({"User-Agent": self.user_agent})
         self.follow_external = False
         self.include_subdomains = True
-        self.max_pages = 1000
+        self.max_pages = MAX_PAGES
         
         if use_tor:
             self._setup_tor_proxy()
@@ -84,10 +95,7 @@ class SiteCloner:
         
     def _setup_tor_proxy(self):
         """Configure session to use Tor proxy."""
-        proxies = {
-            "http": self.tor_proxy,
-            "https": self.tor_proxy
-        }
+        proxies = {"http": self.tor_proxy, "https": self.tor_proxy}
         self.session.proxies.update(proxies)
         logger.info(f"Tor proxy enabled: {self.tor_proxy}")
         
@@ -96,8 +104,7 @@ class SiteCloner:
         parsed = urlparse(url)
         netloc = parsed.netloc.lower()
         path = parsed.path.rstrip('/') or '/'
-        normalized = urlunparse((parsed.scheme, netloc, path, '', parsed.query, ''))
-        return normalized
+        return urlunparse((parsed.scheme, netloc, path, '', parsed.query, ''))
     
     def _is_internal_url(self, url: str, base_domain: str) -> bool:
         """Check if URL belongs to the same domain."""
@@ -235,90 +242,37 @@ class SiteCloner:
     def extract_links(self, html: str, base_url: str) -> List[str]:
         """Extract all links from HTML."""
         soup = BeautifulSoup(html, 'lxml')
-        links = []
-        
-        for tag in soup.find_all('a', href=True):
-            href = tag['href'].strip()
-            if href.startswith(('javascript:', 'mailto:', 'tel:', '#')):
-                continue
-            
-            absolute_url = urljoin(base_url, href)
-            links.append(absolute_url)
-        
-        return links
+        return [
+            urljoin(base_url, tag['href'].strip())
+            for tag in soup.find_all('a', href=True)
+            if not tag['href'].strip().startswith(('javascript:', 'mailto:', 'tel:', '#'))
+        ]
     
     def extract_assets(self, html: str, base_url: str) -> Dict[str, List[str]]:
         """Extract asset URLs (images, CSS, JS)."""
         soup = BeautifulSoup(html, 'lxml')
-        assets = {
-            'images': [],
-            'css': [],
-            'js': []
-        }
+        assets = {'images': [], 'css': [], 'js': []}
         
         # Images
-        for img in soup.find_all('img', src=True):
-            src = img['src'].strip()
-            if not src.startswith(('data:', 'javascript:')):
-                assets['images'].append(urljoin(base_url, src))
+        assets['images'] = [
+            urljoin(base_url, img['src'].strip())
+            for img in soup.find_all('img', src=True)
+            if not img['src'].strip().startswith(('data:', 'javascript:'))
+        ]
         
         # CSS
-        for link in soup.find_all('link', rel='stylesheet', href=True):
-            assets['css'].append(urljoin(base_url, link['href']))
+        assets['css'] = [
+            urljoin(base_url, link['href'].strip())
+            for link in soup.find_all('link', rel='stylesheet', href=True)
+        ]
         
         # JS
-        for script in soup.find_all('script', src=True):
-            assets['js'].append(urljoin(base_url, script['src']))
+        assets['js'] = [
+            urljoin(base_url, script['src'].strip())
+            for script in soup.find_all('script', src=True)
+        ]
         
         return assets
-    
-    def _get_asset_path(self, url: str, asset_type: str) -> Path:
-        """Generate organized path for assets."""
-        parsed = urlparse(url)
-        
-        # Create domain-based folder structure
-        domain = parsed.netloc.replace('.', '_').replace(':', '_')
-        
-        if asset_type == 'images':
-            subdir = self.output_dir / domain / 'images'
-        elif asset_type == 'css':
-            subdir = self.output_dir / domain / 'css'
-        elif asset_type == 'js':
-            subdir = self.output_dir / domain / 'js'
-        else:
-            subdir = self.output_dir / domain / 'assets'
-        
-        # Generate unique filename
-        filename = os.path.basename(parsed.path) or f"asset_{hashlib.md5(url.encode()).hexdigest()[:8]}"
-        if parsed.query:
-            query_hash = hashlib.md5(parsed.query.encode('utf-8')).hexdigest()[:8]
-            filename = f"{query_hash}_{filename}"
-        
-        counter = 0
-        base_name, ext = os.path.splitext(filename)
-        output_path = subdir / filename
-        
-        while output_path.exists():
-            counter += 1
-            output_path = subdir / f"{base_name}_{counter}{ext}"
-        
-        return output_path
-
-    def _get_local_html_path(self, url: str) -> Path:
-        """Generate the local HTML output path for a page URL."""
-        parsed = urlparse(url)
-        path = parsed.path.rstrip('/') or '/'
-        if path.endswith('/'):
-            path = f"{path}index.html"
-        elif not path.endswith('.html'):
-            path = f"{path.rstrip('/')}/index.html"
-
-        if parsed.query:
-            query_hash = hashlib.md5(parsed.query.encode('utf-8')).hexdigest()[:8]
-            path = path.replace('.html', f'_{query_hash}.html')
-
-        domain = parsed.netloc.replace('.', '_').replace(':', '_')
-        return self.output_dir / domain / path.lstrip('/')
     
     def save_html(self, html: str, url: str, output_path: Path):
         """Save HTML file with rewritten local links and organized structure."""
@@ -330,66 +284,39 @@ class SiteCloner:
         base_domain = parsed.netloc
         soup = BeautifulSoup(html, 'lxml')
         
-        # Rewrite links to work locally when the target will be downloaded
-        for tag in soup.find_all(['a', 'img', 'link', 'script'], recursive=True):
-            # page links
-            if tag.name == 'a' and tag.has_attr('href'):
-                original = tag['href']
-                if original and not original.startswith(('javascript:', 'mailto:', 'tel:', '#')):
-                    try:
-                        absolute = urljoin(url, original)
-                        if self._should_follow_link(absolute, base_domain):
-                            local_path = self._get_local_html_path(absolute)
-                            rel_path = os.path.relpath(local_path, output_path.parent)
-                            tag['href'] = rel_path
-                    except Exception:
-                        pass
-
-            # image sources
-            if tag.name == 'img' and tag.has_attr('src'):
-                original = tag['src']
-                if original and not original.startswith(('data:', 'javascript:')):
-                    try:
-                        absolute = urljoin(url, original)
-                        if self._should_follow_link(absolute, base_domain):
-                            local_path = self._get_asset_path(absolute, 'images')
-                            rel_path = os.path.relpath(local_path, output_path.parent)
-                            tag['src'] = rel_path
-                    except Exception:
-                        pass
-
-            # stylesheet links
-            if tag.name == 'link' and tag.has_attr('href') and 'stylesheet' in tag.get('rel', []):
-                original = tag['href']
-                if original and not original.startswith(('javascript:', 'data:')):
-                    try:
-                        absolute = urljoin(url, original)
-                        if self._should_follow_link(absolute, base_domain):
-                            local_path = self._get_asset_path(absolute, 'css')
-                            rel_path = os.path.relpath(local_path, output_path.parent)
-                            tag['href'] = rel_path
-                    except Exception:
-                        pass
-
-            # javascript sources
-            if tag.name == 'script' and tag.has_attr('src'):
-                original = tag['src']
-                if original and not original.startswith(('javascript:', 'data:')):
-                    try:
-                        absolute = urljoin(url, original)
-                        if self._should_follow_link(absolute, base_domain):
-                            local_path = self._get_asset_path(absolute, 'js')
-                            rel_path = os.path.relpath(local_path, output_path.parent)
-                            tag['src'] = rel_path
-                    except Exception:
-                        pass
+        # Rewrite rules for different tag types
+        rewrite_rules = [
+            ('a', 'href', lambda abs_url: self._get_local_html_path(abs_url)),
+            ('img', 'src', lambda abs_url: self._get_asset_path(abs_url, 'images')),
+            ('link', 'href', lambda abs_url: self._get_asset_path(abs_url, 'css'), 
+             lambda tag: 'stylesheet' in tag.get('rel', [])),
+            ('script', 'src', lambda abs_url: self._get_asset_path(abs_url, 'js')),
+        ]
+        
+        for tag_name, attr, path_func, *conditions in rewrite_rules:
+            for tag in soup.find_all(tag_name, recursive=True):
+                if not tag.has_attr(attr):
+                    continue
+                    
+                original = tag[attr]
+                if not original or original.startswith(('javascript:', 'mailto:', 'tel:', '#', 'data:')):
+                    continue
+                
+                # Check additional conditions if provided
+                if conditions and not all(cond(tag) for cond in conditions):
+                    continue
+                    
+                try:
+                    absolute = urljoin(url, original)
+                    if self._should_follow_link(absolute, base_domain):
+                        local_path = path_func(absolute)
+                        tag[attr] = os.path.relpath(local_path, output_path.parent)
+                except Exception:
+                    pass
         
         # Add metadata comment
         meta_comment = f"<!-- Cloned from {url} on {datetime.now().isoformat()} -->\n"
-        
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(meta_comment + str(soup))
-        
+        output_path.write_text(meta_comment + str(soup), encoding='utf-8')
         logger.info(f"Saved: {output_path}")
     
     def save_asset(self, url: str, asset_type: str):
@@ -403,22 +330,14 @@ class SiteCloner:
             if response.status_code == 200:
                 output_path = self._get_asset_path(url, asset_type)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                with open(output_path, 'wb') as f:
-                    f.write(response.content)
+                output_path.write_bytes(response.content)
                 
                 self.downloaded_assets.add(normalized)
                 self.url_map[normalized] = output_path
                 
                 # Update stats
-                if asset_type == 'images':
-                    self.stats['images'] += 1
-                elif asset_type == 'css':
-                    self.stats['css'] += 1
-                elif asset_type == 'js':
-                    self.stats['js'] += 1
-                else:
-                    self.stats['other'] += 1
+                stat_key = asset_type if asset_type in self.stats else 'other'
+                self.stats[stat_key] += 1
                 
                 logger.info(f"Downloaded {asset_type}: {output_path.name}")
                 
