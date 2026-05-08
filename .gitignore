@@ -5,34 +5,39 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Build artifacts
-dist/
-build/
-*.egg-info/
-
 # Dependencies
 .venv/
 venv/
+env/
 .env
 .env.local
-*.env.*
+.env.*
 
 # Logs
 *.log
 
-# Coverage
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# Build artifacts
+dist/
+build/
 .coverage
-coverage/
 htmlcov/
+coverage/
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
+*.sublime-project
+*.sublime-workspace
 
 # OS
 .DS_Store
 Thumbs.db
+
+# MyPy
+.mypy_cache/
 ```
