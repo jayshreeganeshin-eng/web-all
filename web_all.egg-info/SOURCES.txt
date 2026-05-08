@@ -13,6 +13,7 @@ web_all/api/server.py
 web_all/core/cloner.py
 web_all/core/invisible.py
 web_all/gui/index.html
+web_all/i18n/__init__.py
 web_all/utils/__init__.py
 web_all/utils/ai_engine.py
 web_all/utils/zip_utils.py
