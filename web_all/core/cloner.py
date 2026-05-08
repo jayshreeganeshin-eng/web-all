@@ -2,6 +2,8 @@
 Core cloner engine for static and dynamic websites.
 Supports clearnet and .onion (Tor) sites.
 Auto-downloads full websites with organized folder structure.
+
+Security hardened and performance optimized.
 """
 
 import asyncio
@@ -9,9 +11,11 @@ import hashlib
 import json
 import logging
 import os
+import re
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse, urlunparse
 
 from requests.adapters import HTTPAdapter
@@ -39,6 +43,31 @@ DEFAULT_DELAY = 0.5
 DEFAULT_DEPTH = 2
 MAX_PAGES = 1000
 ASSET_TYPES = {"images", "css", "js"}
+
+# Security: Allowed schemes to prevent SSRF
+ALLOWED_SCHEMES = frozenset(["http", "https"])
+# Security: Blocked private/internal IP ranges
+BLOCKED_IP_PATTERNS = [
+    r"^127\.", r"^10\.", r"^192\.168\.", r"^172\.(1[6-9]|2[0-9]|3[0-1])\.",
+    r"^0\.", r"^169\.254\.",
+]
+
+
+def _is_safe_url(url: str) -> bool:
+    """Security: Validate URL is safe to fetch (prevent SSRF)."""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ALLOWED_SCHEMES:
+            return False
+        # Check for blocked IP patterns
+        netloc = parsed.netloc.lower()
+        for pattern in BLOCKED_IP_PATTERNS:
+            if re.match(pattern, netloc):
+                logger.warning(f"Blocked access to internal IP: {netloc}")
+                return False
+        return True
+    except Exception:
+        return False
 
 
 class SiteCloner:
@@ -142,7 +171,7 @@ class SiteCloner:
         return False
 
     def _get_local_html_path(self, url: str) -> Path:
-        """Generate a local file path for a page URL."""
+        """Generate a local file path for a page URL with path traversal protection."""
         parsed = urlparse(url)
         path = parsed.path.rstrip("/") or "/"
         if path.endswith("/"):
@@ -154,15 +183,25 @@ class SiteCloner:
             query_hash = hashlib.md5(parsed.query.encode("utf-8")).hexdigest()[:8]
             path = path.replace(".html", f"_{query_hash}.html")
 
+        # Security: Sanitize path components to prevent directory traversal
         domain = parsed.netloc.replace(".", "_").replace(":", "_")
+        domain = re.sub(r'[<>:"|?*]', '_', domain)
+        
+        # Clean path of any dangerous characters
+        path_parts = path.lstrip("/").split("/")
+        safe_parts = [re.sub(r'[<>:"|?*]', '_', p) for p in path_parts if p and p != ".."]
+        path = "/" + "/".join(safe_parts) if safe_parts else "/index.html"
+        
         return self.output_dir / domain / path.lstrip("/")
 
     def _get_asset_path(self, url: str, asset_type: str) -> Path:
-        """Generate organized path for assets."""
+        """Generate organized path for assets with security sanitization."""
         parsed = urlparse(url)
 
         # Create domain-based folder structure
         domain = parsed.netloc.replace(".", "_").replace(":", "_")
+        # Security: Sanitize domain name
+        domain = re.sub(r'[<>:"|?*]', '_', domain)
 
         if asset_type == "images":
             subdir = self.output_dir / domain / "images"
@@ -173,10 +212,13 @@ class SiteCloner:
         else:
             subdir = self.output_dir / domain / "assets"
 
-        # Generate unique filename
+        # Generate unique filename with sanitization
         filename = (
             os.path.basename(parsed.path) or f"asset_{hashlib.md5(url.encode()).hexdigest()[:8]}"
         )
+        # Security: Sanitize filename
+        filename = re.sub(r'[<>:"|?*]', '_', filename)
+        
         if parsed.query:
             query_hash = hashlib.md5(parsed.query.encode("utf-8")).hexdigest()[:8]
             filename = f"{query_hash}_{filename}"
@@ -193,12 +235,15 @@ class SiteCloner:
 
     async def fetch_page(self, url: str) -> Optional[str]:
         """Fetch page content with retry logic and performance tracking."""
-        import time
-
         start_time = time.perf_counter()
 
         async with self.semaphore:
             try:
+                # Security: Validate URL before fetching
+                if not _is_safe_url(url):
+                    logger.warning(f"Blocked unsafe URL: {url}")
+                    return None
+
                 normalized = self._normalize_url(url)
                 if normalized in self.seen_urls:
                     return None
@@ -212,7 +257,7 @@ class SiteCloner:
 
                 loop = asyncio.get_running_loop()
                 response = await loop.run_in_executor(
-                    None, lambda: self.session.get(url, timeout=self.timeout)
+                    None, lambda: self.session.get(url, timeout=self.timeout, allow_redirects=True)
                 )
 
                 if response.status_code == 200:
@@ -335,13 +380,22 @@ class SiteCloner:
                 return None
 
     def extract_links(self, html: str, base_url: str) -> List[str]:
-        """Extract all links from HTML."""
+        """Extract all links from HTML with security filtering."""
         soup = BeautifulSoup(html, "lxml")
-        return [
-            urljoin(base_url, tag["href"].strip())
-            for tag in soup.find_all("a", href=True)
-            if not tag["href"].strip().startswith(("javascript:", "mailto:", "tel:", "#"))
-        ]
+        links = []
+        for tag in soup.find_all("a", href=True):
+            href = tag["href"].strip()
+            # Skip dangerous schemes
+            if href.startswith(("javascript:", "mailto:", "tel:", "#", "data:", "file:")):
+                continue
+            try:
+                absolute = urljoin(base_url, href)
+                # Security: Only include safe URLs
+                if _is_safe_url(absolute):
+                    links.append(absolute)
+            except Exception:
+                continue
+        return links
 
     def extract_assets(self, html: str, base_url: str) -> Dict[str, List[str]]:
         """Extract asset URLs (images, CSS, JS)."""
@@ -422,19 +476,30 @@ class SiteCloner:
 
     def save_asset(self, url: str, asset_type: str):
         """Download and save asset with organized folder structure and optimized timeout."""
-        import time
-
         start_time = time.perf_counter()
 
         try:
+            # Security: Validate asset URL
+            if not _is_safe_url(url):
+                logger.debug(f"Blocked unsafe asset URL: {url}")
+                return
+
             normalized = self._normalize_url(url)
             if normalized in self.downloaded_assets:
                 return
 
             # Use shorter timeout for assets (they're less critical)
-            response = self.session.get(url, timeout=self.asset_timeout)
+            response = self.session.get(url, timeout=self.asset_timeout, allow_redirects=True)
             if response.status_code == 200:
                 output_path = self._get_asset_path(url, asset_type)
+                
+                # Security: Verify the resolved path is within output directory
+                try:
+                    output_path.resolve().relative_to(self.output_dir.resolve())
+                except ValueError:
+                    logger.warning(f"Asset path escapes output directory: {output_path}")
+                    return
+                
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 output_path.write_bytes(response.content)
 
