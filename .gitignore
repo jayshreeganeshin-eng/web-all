@@ -5,26 +5,24 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-*.so
-.coverage
-coverage/
-htmlcov/
-.pytest_cache/
-.mypy_cache/
-
-# Build and distribution artifacts
-build/
-dist/
-*.egg-info/
-
-# Virtual environments
+env/
 venv/
 .venv/
-env/
-ENV/
+.ENV
+.ENV.*
+.env
+.env.*
+.python-version
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
-# Output directories
+# Build artifacts
 output/
+dist/
+build/
+*.egg-info/
 
 # Logs
 *.log
@@ -32,4 +30,11 @@ output/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
 ```

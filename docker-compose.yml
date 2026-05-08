@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  web-all:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=INFO
+      # AI Configuration (optional)
+      - AI_ENABLED=false
+      - AI_PROVIDER=ollama
+      - AI_BASE_URL=http://localhost:11434
+      # Tor Configuration (optional)
+      - USE_TOR=false
+      - TOR_PROXY=http://tor:9050
+    restart: unless-stopped
+    networks:
+      - web-all-network
+
+  # Optional: Ollama for local AI
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ai"]
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    networks:
+      - web-all-network
+
+  # Optional: Tor proxy for .onion sites
+  tor:
+    image: dperson/torproxy:latest
+    profiles: ["tor"]
+    container_name: tor
+    restart: unless-stopped
+    cap_add:
+      - SETPCAP
+    networks:
+      - web-all-network
+
+volumes:
+  ollama_data:
+
+networks:
+  web-all-network:
+    driver: bridge

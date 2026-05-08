@@ -4,22 +4,20 @@ Provides endpoints for cloning jobs, status tracking, AI configuration, and file
 """
 
 import os
-import json
-import asyncio
 import uuid
 from datetime import datetime
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..core.cloner import SiteCloner
 from ..core.invisible import InvisibleContentEngine
-from ..utils.ai_engine import AIEngine, get_available_providers, validate_api_key
+from ..utils.ai_engine import AIEngine, get_available_providers
 from ..utils.zip_utils import create_zip_archive
 
 app = FastAPI(title="web-all API", version="3.0.0")
@@ -37,7 +35,7 @@ ai_config: Dict[str, Any] = {
     "provider": "ollama",
     "api_key": "",
     "model": "",
-    "base_url": "http://localhost:11434"
+    "base_url": "http://localhost:11434",
 }
 
 # Output directory
@@ -50,14 +48,14 @@ def _cleanup_old_jobs():
     if len(jobs) >= MAX_JOBS:
         # Sort by completion time and remove oldest
         completed_jobs = [
-            (job_id, job_data) 
-            for job_id, job_data in jobs.items() 
+            (job_id, job_data)
+            for job_id, job_data in jobs.items()
             if job_data.get("status") in ("completed", "failed")
         ]
         completed_jobs.sort(key=lambda x: x[1].get("completed_at", x[1].get("failed_at", "")))
-        
+
         # Remove oldest half of completed jobs
-        for job_id, _ in completed_jobs[:len(completed_jobs)//2]:
+        for job_id, _ in completed_jobs[: len(completed_jobs) // 2]:
             del jobs[job_id]
 
 
@@ -93,10 +91,10 @@ async def run_clone_job(job_id: str, request: CloneRequest):
     try:
         jobs[job_id]["status"] = "running"
         jobs[job_id]["started_at"] = datetime.now().isoformat()
-        
+
         output_name = request.output_name or f"clone_{job_id[:8]}"
         output_path = OUTPUT_DIR / output_name
-        
+
         # Initialize AI engine if enabled
         ai_engine = None
         if request.ai_enabled and ai_config.get("enabled"):
@@ -105,27 +103,31 @@ async def run_clone_job(job_id: str, request: CloneRequest):
 
         if request.mode == "everything" or request.everything:
             jobs[job_id]["everything"] = True
-            request = request.copy(update={
-                "discover_invisible": True,
-                "mode": "dynamic",
-                "depth": max(request.depth, 5),
-                "ai_enabled": True
-            })
+            request = request.copy(
+                update={
+                    "discover_invisible": True,
+                    "mode": "dynamic",
+                    "depth": max(request.depth, 5),
+                    "ai_enabled": True,
+                }
+            )
 
         if request.mode == "deep-crawl":
-            request = request.copy(update={
-                "discover_invisible": True,
-                "mode": "dynamic",
-                "depth": max(request.depth, 5)
-            })
+            request = request.copy(
+                update={
+                    "discover_invisible": True,
+                    "mode": "dynamic",
+                    "depth": max(request.depth, 5),
+                }
+            )
 
         cloner = SiteCloner(
             output_dir=str(output_path),
             depth=request.depth,
             use_tor=request.use_tor,
-            max_pages=request.max_pages
+            max_pages=request.max_pages,
         )
-        
+
         if request.discover_invisible and request.mode in ["static", "dynamic"]:
             engine = InvisibleContentEngine(use_tor=request.use_tor)
             # First expand content, then clone
@@ -140,13 +142,19 @@ async def run_clone_job(job_id: str, request: CloneRequest):
             image_urls = assets.get("images", [])
             for image_url in image_urls:
                 cloner.save_asset(image_url, "images")
-            manifest = {"mode": "images", "image_count": cloner.stats["images"], "source_url": request.url}
+            manifest = {
+                "mode": "images",
+                "image_count": cloner.stats["images"],
+                "source_url": request.url,
+            }
         elif request.mode == "text":
             html = await cloner.fetch_page(request.url)
             if not html:
                 raise Exception("Failed to fetch page for text extraction")
-            from bs4 import BeautifulSoup
             from urllib.parse import urlparse
+
+            from bs4 import BeautifulSoup
+
             soup = BeautifulSoup(html, "lxml")
             for tag in soup(["script", "style"]):
                 tag.decompose()
@@ -158,31 +166,31 @@ async def run_clone_job(job_id: str, request: CloneRequest):
             manifest = {"mode": "text", "source_url": request.url, "characters": len(text)}
         else:
             manifest = await cloner.clone_site(request.url, mode=request.mode)
-        
+
         # Run AI analysis if enabled
         if ai_engine:
             try:
                 index_html = output_path / "index.html"
                 if index_html.exists():
-                    html_content = index_html.read_text(encoding='utf-8')
+                    html_content = index_html.read_text(encoding="utf-8")
                     await ai_engine.analyze_and_enhance(html_content, request.url, output_path)
                     jobs[job_id]["ai_completed"] = True
             except Exception as ai_error:
                 jobs[job_id]["ai_error"] = str(ai_error)
-        
-        jobs[job_id].update({
-            "status": "completed",
-            "completed_at": datetime.now().isoformat(),
-            "manifest": manifest,
-            "output_path": str(output_path)
-        })
-        
+
+        jobs[job_id].update(
+            {
+                "status": "completed",
+                "completed_at": datetime.now().isoformat(),
+                "manifest": manifest,
+                "output_path": str(output_path),
+            }
+        )
+
     except Exception as e:
-        jobs[job_id].update({
-            "status": "failed",
-            "error": str(e),
-            "failed_at": datetime.now().isoformat()
-        })
+        jobs[job_id].update(
+            {"status": "failed", "error": str(e), "failed_at": datetime.now().isoformat()}
+        )
 
 
 @app.get("/")
@@ -214,24 +222,20 @@ async def create_clone_job(request: CloneRequest, background_tasks: BackgroundTa
         raise HTTPException(status_code=400, detail=str(exc))
 
     job_id = str(uuid.uuid4())
-    
+
     # Cleanup old jobs before adding new one
     _cleanup_old_jobs()
-    
+
     jobs[job_id] = {
         "id": job_id,
         "request": request.model_dump(),
         "status": "queued",
-        "created_at": datetime.now().isoformat()
+        "created_at": datetime.now().isoformat(),
     }
-    
+
     background_tasks.add_task(run_clone_job, job_id, request)
-    
-    return {
-        "job_id": job_id,
-        "status": "queued",
-        "message": "Job created successfully"
-    }
+
+    return {"job_id": job_id, "status": "queued", "message": "Job created successfully"}
 
 
 @app.get("/api/v1/jobs/{job_id}")
@@ -239,30 +243,26 @@ async def get_job_status(job_id: str):
     """Get status of a cloning job."""
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job = jobs[job_id]
-    
-    response = {
-        "job_id": job_id,
-        "status": job["status"],
-        "created_at": job["created_at"]
-    }
-    
+
+    response = {"job_id": job_id, "status": job["status"], "created_at": job["created_at"]}
+
     if "started_at" in job:
         response["started_at"] = job["started_at"]
-    
+
     if "completed_at" in job:
         response["completed_at"] = job["completed_at"]
-    
+
     if "manifest" in job:
         response["manifest"] = job["manifest"]
-    
+
     if "error" in job:
         response["error"] = job["error"]
-    
+
     if job["status"] == "completed" and "output_path" in job:
         response["download_url"] = f"/api/v1/download/{job_id}"
-    
+
     return response
 
 
@@ -270,30 +270,28 @@ async def get_job_status(job_id: str):
 async def download_job_output(job_id: str):
     """Download the cloned site as a ZIP file or access individual files."""
     import tempfile
-    
+
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job = jobs[job_id]
-    
+
     if job["status"] != "completed":
         raise HTTPException(status_code=400, detail="Job not completed")
-    
+
     output_path = Path(job.get("output_path", ""))
-    
+
     if not output_path.exists():
         raise HTTPException(status_code=404, detail="Output not found")
-    
+
     # Create ZIP archive for download
     try:
         temp_dir = tempfile.mkdtemp()
         zip_path = Path(temp_dir) / f"{output_path.name}.zip"
         create_zip_archive(str(output_path), str(zip_path))
-        
+
         return FileResponse(
-            str(zip_path),
-            media_type="application/zip",
-            filename=f"{output_path.name}.zip"
+            str(zip_path), media_type="application/zip", filename=f"{output_path.name}.zip"
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create ZIP: {str(e)}")
@@ -304,40 +302,40 @@ async def view_file(job_id: str, filename: str):
     """View a specific file from the cloned site."""
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job = jobs[job_id]
-    
+
     if job["status"] != "completed":
         raise HTTPException(status_code=400, detail="Job not completed")
-    
+
     output_path = Path(job.get("output_path", ""))
     file_path = output_path / filename
     resolved_output = output_path.resolve()
     resolved_file = file_path.resolve()
     if not str(resolved_file).startswith(str(resolved_output)):
         raise HTTPException(status_code=400, detail="Invalid filename")
-    
+
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
-    
+
     # Determine media type based on extension
     media_types = {
-        '.html': 'text/html',
-        '.css': 'text/css',
-        '.js': 'application/javascript',
-        '.json': 'application/json',
-        '.txt': 'text/plain',
-        '.png': 'image/png',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.gif': 'image/gif',
-        '.svg': 'image/svg+xml',
-        '.pdf': 'application/pdf',
+        ".html": "text/html",
+        ".css": "text/css",
+        ".js": "application/javascript",
+        ".json": "application/json",
+        ".txt": "text/plain",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".svg": "image/svg+xml",
+        ".pdf": "application/pdf",
     }
-    
+
     ext = file_path.suffix.lower()
-    media_type = media_types.get(ext, 'application/octet-stream')
-    
+    media_type = media_types.get(ext, "application/octet-stream")
+
     return FileResponse(str(file_path), media_type=media_type)
 
 
@@ -352,7 +350,7 @@ async def list_jobs():
                 "url": job["request"]["url"],
                 "created_at": job["created_at"],
                 "ai_enabled": job.get("ai_status", "") != "",
-                "ai_completed": job.get("ai_completed", False)
+                "ai_completed": job.get("ai_completed", False),
             }
             for job_id, job in jobs.items()
         ]
@@ -362,34 +360,28 @@ async def list_jobs():
 @app.get("/api/v1/ai/providers")
 async def get_ai_providers():
     """Get available AI providers."""
-    return {
-        "providers": get_available_providers(),
-        "current_config": ai_config
-    }
+    return {"providers": get_available_providers(), "current_config": ai_config}
 
 
 @app.post("/api/v1/ai/config")
 async def set_ai_config(config: AIConfigRequest):
     """Configure AI settings."""
     global ai_config
-    
+
     # Validate API key if required
     if config.enabled and config.provider != "ollama":
         if not config.api_key or len(config.api_key) < 10:
             raise HTTPException(status_code=400, detail="Valid API key required for this provider")
-    
+
     ai_config = {
         "enabled": config.enabled,
         "provider": config.provider,
         "api_key": config.api_key or "",
         "model": config.model or "",
-        "base_url": config.base_url or "http://localhost:11434"
+        "base_url": config.base_url or "http://localhost:11434",
     }
-    
-    return {
-        "message": "AI configuration updated successfully",
-        "config": ai_config
-    }
+
+    return {"message": "AI configuration updated successfully", "config": ai_config}
 
 
 @app.get("/api/v1/ai/config")
@@ -406,14 +398,14 @@ async def test_ai_connection():
     """Test AI connection with a simple prompt."""
     if not ai_config.get("enabled"):
         raise HTTPException(status_code=400, detail="AI is not enabled")
-    
+
     try:
         engine = AIEngine(ai_config)
         response = await engine.summarize_content("<p>Hello, this is a test.</p>", "test://url")
         return {
             "success": True,
             "message": "AI connection successful",
-            "sample_response": response[:200] if response else "No response generated"
+            "sample_response": response[:200] if response else "No response generated",
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI test failed: {str(e)}")
@@ -422,18 +414,18 @@ async def test_ai_connection():
 def start_api(host: str = "0.0.0.0", port: int = 8000, gui_dir: Optional[str] = None):
     """Start the API server with optional GUI serving."""
     import uvicorn
-    
+
     global GUI_DIR
     GUI_DIR = gui_dir
 
     # Mount GUI if directory provided
     if gui_dir and os.path.exists(gui_dir):
         app.mount("/", StaticFiles(directory=gui_dir, html=True), name="gui")
-    
+
     print(f"Starting web-all API on http://{host}:{port}")
     if gui_dir:
         print(f"Serving GUI from {gui_dir}")
-    
+
     uvicorn.run(app, host=host, port=port)
 
 
