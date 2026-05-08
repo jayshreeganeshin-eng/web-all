@@ -415,7 +415,8 @@ async def get_logs_summary():
             "total_warnings": summary["total_warnings"],
             "recent_errors": summary["recent_errors"],
             "recent_warnings": [],  # Can be extended to track warnings separately
-            "system_info": []
+            "system_info": [],
+            "log_files": summary["log_files"]
         }
     except Exception as e:
         log_capture.log_error("Failed to get logs summary", exception=e, logger_name="api")
