@@ -360,7 +360,10 @@ class SiteCloner:
             logger.error(f"Failed to download asset {url}: {e}")
 
     async def clone_site(self, start_url: str, mode: str = "static"):
-        """Main cloning method - automatically downloads full website with organized structure."""
+        """Main cloning method - automatically downloads full website with organized structure.
+        
+        Optimized for maximum data extraction with comprehensive logging and error handling.
+        """
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         parsed = urlparse(start_url)
@@ -402,10 +405,14 @@ class SiteCloner:
 
         logger.info(f"🚀 Starting clone of {start_url}")
         logger.info(f"   Mode: {mode}, Depth: {depth_limit}, Output: {domain_dir}")
+        logger.info(f"   Max pages: {self.max_pages}, Concurrency: {self.concurrency}")
 
         # Handle depth=0 as unlimited (use max_pages limit instead)
         is_unlimited = depth_limit == 0
         effective_depth = 999 if is_unlimited else depth_limit
+        
+        # Track start time for performance metrics
+        start_time = datetime.now()
 
         while queue:
             current_url, current_depth = queue.pop(0)
@@ -452,40 +459,76 @@ class SiteCloner:
 
             await asyncio.sleep(self.delay)
 
-        # Save final comprehensive manifest
+        # Save final comprehensive manifest with performance metrics
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        
         manifest["visited_count"] = len(self.visited_urls)
         manifest["assets_count"] = len(self.downloaded_assets)
         manifest["stats"] = self.stats
         manifest["output_directory"] = str(domain_dir)
+        manifest["duration_seconds"] = round(duration, 2)
+        manifest["performance"] = {
+            "pages_per_second": round(self.stats["pages"] / duration, 2) if duration > 0 else 0,
+            "assets_per_second": round(len(self.downloaded_assets) / duration, 2) if duration > 0 else 0,
+            "total_duration": f"{duration:.2f}s"
+        }
 
         manifest_path = domain_dir / "manifest.json"
         with open(manifest_path, "w", encoding="utf-8") as f:
             json.dump(manifest, f, indent=2, ensure_ascii=False)
 
-        # Create README with clone info
+        # Create detailed README with comprehensive clone info
         readme_path = domain_dir / "README.txt"
         with open(readme_path, "w", encoding="utf-8") as f:
-            f.write("Website Clone Report\n")
-            f.write("====================\n\n")
+            f.write("=" * 60 + "\n")
+            f.write("WEBSITE CLONE REPORT - Complete Extraction Summary\n")
+            f.write("=" * 60 + "\n\n")
             f.write(f"Source URL: {start_url}\n")
             f.write(f"Cloned on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Mode: {mode}\n")
-            f.write(f"Depth: {self.depth}\n\n")
-            f.write("Statistics:\n")
-            f.write(f"  Pages cloned: {self.stats['pages']}\n")
-            f.write(f"  Images downloaded: {self.stats['images']}\n")
-            f.write(f"  CSS files: {self.stats['css']}\n")
-            f.write(f"  JavaScript files: {self.stats['js']}\n")
-            f.write(f"  Other assets: {self.stats['other']}\n")
-            f.write(f"  Errors: {self.stats['errors']}\n\n")
-            f.write("Folder Structure:\n")
-            f.write("  /images - All images from the website\n")
-            f.write("  /css - All stylesheets\n")
-            f.write("  /js - All JavaScript files\n")
-            f.write("  /*.html - Cloned pages\n")
-            f.write("  manifest.json - Detailed clone information\n")
+            f.write(f"Depth: {self.depth} (effective: {depth_limit})\n")
+            f.write(f"Duration: {duration:.2f} seconds\n\n")
+            f.write("-" * 60 + "\n")
+            f.write("EXTRACTION STATISTICS:\n")
+            f.write("-" * 60 + "\n")
+            f.write(f"  ✓ Pages cloned: {self.stats['pages']}\n")
+            f.write(f"  ✓ Images downloaded: {self.stats['images']}\n")
+            f.write(f"  ✓ CSS files: {self.stats['css']}\n")
+            f.write(f"  ✓ JavaScript files: {self.stats['js']}\n")
+            f.write(f"  ✓ Other assets: {self.stats['other']}\n")
+            f.write(f"  ✗ Errors encountered: {self.stats['errors']}\n")
+            f.write(f"  📦 Total files: {self.stats['pages'] + len(self.downloaded_assets)}\n\n")
+            f.write("-" * 60 + "\n")
+            f.write("FOLDER STRUCTURE:\n")
+            f.write("-" * 60 + "\n")
+            f.write("  /images - All images from the website (PNG, JPG, GIF, SVG, WebP, etc.)\n")
+            f.write("  /css - All stylesheets and style resources\n")
+            f.write("  /js - All JavaScript files and scripts\n")
+            f.write("  /assets - Other assets (fonts, videos, documents, etc.)\n")
+            f.write("  /*.html - Cloned pages with rewritten local links\n")
+            f.write("  manifest.json - Detailed clone information and statistics\n")
+            f.write("  README.txt - This file\n")
+            f.write("  ai_analysis.json - AI-generated analysis (if enabled)\n")
+            f.write("  SUMMARY.md - Human-readable AI summary (if enabled)\n\n")
+            f.write("-" * 60 + "\n")
+            f.write("CONFIGURATION USED:\n")
+            f.write("-" * 60 + "\n")
+            f.write(f"  Concurrency: {self.concurrency} simultaneous requests\n")
+            f.write(f"  Delay between requests: {self.delay}s\n")
+            f.write(f"  Timeout: {self.timeout}s\n")
+            f.write(f"  Tor enabled: {self.use_tor}\n")
+            f.write(f"  Auto-organize: {self.auto_organize}\n")
+            f.write(f"  Download all assets: {self.download_all_assets}\n")
+            f.write(f"  Max pages limit: {self.max_pages}\n")
+            f.write(f"  Follow external links: {self.follow_external}\n")
+            f.write(f"  Include subdomains: {self.include_subdomains}\n\n")
+            f.write("=" * 60 + "\n")
+            f.write("Clone completed successfully!\n")
+            f.write("=" * 60 + "\n")
 
         logger.info("\n✅ Clone complete!")
+        logger.info(f"   ⏱️  Duration: {duration:.2f} seconds")
         logger.info(f"   📄 Pages visited: {self.stats['pages']}")
         logger.info(f"   🖼️  Images downloaded: {self.stats['images']}")
         logger.info(f"   🎨 CSS files: {self.stats['css']}")
@@ -493,5 +536,6 @@ class SiteCloner:
         logger.info(f"   📦 Total assets: {len(self.downloaded_assets)}")
         logger.info(f"   ❌ Errors: {self.stats['errors']}")
         logger.info(f"   📁 Output: {domain_dir}")
+        logger.info(f"   📊 Performance: {manifest['performance']['pages_per_second']} pages/sec")
 
         return manifest
