@@ -709,7 +709,7 @@
 
             if (data.status === 'running') {
                 progress.style.width = '60%';
-                jobInfo.innerHTML = `<p>Started: ${data.started_at || 'N/A'}</p>`;
+                jobInfo.innerHTML = `<p>Started: ${data.started_at || 'Just now...'}</p>`;
                 if (data.ai_status) {
                     jobInfo.innerHTML += `<p>🤖 ${data.ai_status}</p>`;
                 }
@@ -730,7 +730,7 @@
                 jobInfo.innerHTML = `<p style="color:red;">❌ Error: ${data.error || 'Unknown error'}</p>`;
             } else if (data.status === 'queued') {
                 progress.style.width = '20%';
-                jobInfo.innerHTML = `<p>Waiting to start...</p>`;
+                jobInfo.innerHTML = `<p>⏳ Queued - Waiting to start...</p><p style="font-size:0.9em;color:#666;">Created: ${data.created_at ? new Date(data.created_at).toLocaleString() : 'Just now'}</p>`;
             }
         }
 
