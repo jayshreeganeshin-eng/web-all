@@ -11,7 +11,7 @@ def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="web-all",
-        description="Universal Website Cloner - Download visible and invisible content"
+        description="Universal Website Cloner - Download visible and invisible content",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -20,26 +20,40 @@ def main():
     clone_p = subparsers.add_parser("clone", help="Full website clone with assets")
     clone_p.add_argument("url", help="Target website URL")
     clone_p.add_argument("-o", "--output", default="./output", help="Output directory")
-    clone_p.add_argument("-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)")
+    clone_p.add_argument(
+        "-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)"
+    )
     clone_p.add_argument("-c", "--concurrency", type=int, default=5, help="Concurrent requests")
     clone_p.add_argument("--delay", type=float, default=0.5, help="Delay between requests")
     clone_p.add_argument("--tor", action="store_true", help="Use Tor proxy")
     clone_p.add_argument("--dynamic", action="store_true", help="Use dynamic rendering")
-    clone_p.add_argument("--discover-invisible", action="store_true", help="Discover hidden content")
-    clone_p.add_argument("--everything", action="store_true", help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl")
-    clone_p.add_argument("--ai-enabled", action="store_true", help="Enable AI analysis for this clone")
+    clone_p.add_argument(
+        "--discover-invisible", action="store_true", help="Discover hidden content"
+    )
+    clone_p.add_argument(
+        "--everything",
+        action="store_true",
+        help="Run full capture: dynamic rendering, hidden content discovery, and deep crawl",
+    )
+    clone_p.add_argument(
+        "--ai-enabled", action="store_true", help="Enable AI analysis for this clone"
+    )
 
     # Images command
     img_p = subparsers.add_parser("images", help="Download all images")
     img_p.add_argument("url", help="Target website URL")
     img_p.add_argument("-o", "--output", default="./output/images", help="Output directory")
-    img_p.add_argument("-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)")
+    img_p.add_argument(
+        "-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)"
+    )
 
     # Text command
     txt_p = subparsers.add_parser("text", help="Extract text from pages")
     txt_p.add_argument("url", help="Target website URL")
     txt_p.add_argument("-o", "--output", default="./output/text", help="Output directory")
-    txt_p.add_argument("-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)")
+    txt_p.add_argument(
+        "-d", "--depth", type=int, default=0, help="Crawl depth (0 = all pages from domain)"
+    )
 
     # Serve command (GUI + API)
     serve_p = subparsers.add_parser("serve", help="Start web GUI server")
@@ -76,12 +90,14 @@ def _handle_clone(args):
         depth=args.depth,
         concurrency=args.concurrency,
         delay=args.delay,
-        use_tor=args.tor
+        use_tor=args.tor,
     )
 
     async def run():
         if args.everything:
-            print("⚡ Running full everything capture: dynamic rendering, hidden content discovery, deeper crawl, and AI analysis")
+            print(
+                "⚡ Running full everything capture: dynamic rendering, hidden content discovery, deeper crawl, and AI analysis"
+            )
             args.dynamic = True
             args.discover_invisible = True
             args.ai_enabled = True
@@ -102,11 +118,13 @@ def _handle_clone(args):
 
         if args.ai_enabled:
             try:
-                ai_engine = AIEngine({"enabled": True, "provider": "ollama", "base_url": "http://localhost:11434"})
+                ai_engine = AIEngine(
+                    {"enabled": True, "provider": "ollama", "base_url": "http://localhost:11434"}
+                )
                 parsed = urlparse(args.url)
-                index_html = Path(args.output) / parsed.netloc.replace('.', '_') / "index.html"
+                index_html = Path(args.output) / parsed.netloc.replace(".", "_") / "index.html"
                 if index_html.exists():
-                    html = index_html.read_text(encoding='utf-8')
+                    html = index_html.read_text(encoding="utf-8")
                     await ai_engine.analyze_and_enhance(html, args.url, index_html.parent)
                     print("✅ AI analysis complete!")
                 else:
