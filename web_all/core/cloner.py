@@ -31,7 +31,10 @@ logger = logging.getLogger(__name__)
 
 
 # Constants
-DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+DEFAULT_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
 DEFAULT_TOR_PROXY = "http://127.0.0.1:9050"
 DEFAULT_TIMEOUT = 30
 DEFAULT_CONCURRENCY = 5
@@ -259,14 +262,12 @@ class SiteCloner:
             if response.status_code == 200:
                 allowed_paths = set()
                 lines = response.text.split("\n")
-                current_user_agent = None
                 found_matching_agent = False
 
                 for line in lines:
                     line = line.strip().lower()
                     if line.startswith("user-agent:"):
                         agent = line.split(":", 1)[1].strip()
-                        current_user_agent = agent
                         found_matching_agent = agent == "*" or agent in self.user_agent.lower()
                     elif line.startswith("disallow:") and found_matching_agent:
                         path = line.split(":", 1)[1].strip()
