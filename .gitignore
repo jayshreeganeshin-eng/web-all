@@ -4,12 +4,38 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.pyc.*
-*.pyo.*
-*.pyd.*
+.Python
+venv/
+.venv/
+.env
+.env.local
+*.env.*
 
-# Build artifacts
-web_all.egg-info/
+# Build outputs
+build/
+dist/
+
+# Test coverage
+.coverage
+htmlcov/
+.coverage.*
+.coverage.*
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# IDE files
+.vscode/
+.idea/
 
 # Output directories
 output/
