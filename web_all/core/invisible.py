@@ -150,9 +150,9 @@ class InvisibleContentEngine:
                         clicked_count += 1
                         await asyncio.sleep(0.2)  # Brief pause for animations
                     except Exception:
-                        continue
+                        continue  # Skip elements that can't be clicked
             except Exception:
-                continue
+                continue  # Skip selectors that fail
     
     async def _hover_elements(self, page: Page, selectors: List[str]) -> None:
         """Hover over elements with batching."""
@@ -171,9 +171,9 @@ class InvisibleContentEngine:
                         hovered_count += 1
                         await asyncio.sleep(0.1)
                     except Exception:
-                        continue
+                        continue  # Skip elements that can't be hovered
             except Exception:
-                continue
+                continue  # Skip selectors that fail
     
     async def submit_form_and_capture(
         self,

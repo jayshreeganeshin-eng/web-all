@@ -76,17 +76,22 @@ def extract_zip_archive(zip_path: str, extract_to: str) -> str:
 def get_directory_size(path: str) -> int:
     """Get total size of directory in bytes."""
     total = 0
-    with os.scandir(path) as it:
-        for entry in it:
-            if entry.is_file():
-                total += entry.stat().st_size
-            elif entry.is_dir():
-                total += get_directory_size(entry.path)
+    try:
+        with os.scandir(path) as it:
+            for entry in it:
+                if entry.is_file():
+                    total += entry.stat().st_size
+                elif entry.is_dir():
+                    total += get_directory_size(entry.path)
+    except PermissionError:
+        pass  # Skip directories we can't access
     return total
 
 
 def format_size(size_bytes: int) -> str:
     """Format bytes to human-readable string."""
+    if size_bytes < 0:
+        return "0 B"
     for unit in ['B', 'KB', 'MB', 'GB']:
         if size_bytes < 1024.0:
             return f"{size_bytes:.2f} {unit}"
