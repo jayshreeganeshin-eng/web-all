@@ -1,4 +1,4 @@
-# 🕷️ web-all v3.0 - Universal Website Cloner with AI
+# 🕷️ web-all v4.0 - Universal Website Cloner with AI
 
 **The most advanced open-source tool for cloning websites with AI-powered analysis, hidden content discovery, and auto-organized assets.**
 
