@@ -1,1 +1,5 @@
-Nothing should be ignored based on the provided file changes, as they only include source code and configuration files (.md, .py, .html).
+.DS_Store
+__pycache__/
+*.pyc
+output/
+.env
