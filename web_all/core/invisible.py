@@ -239,11 +239,16 @@ class InvisibleContentEngine:
         from urllib.parse import urljoin
         import aiohttp
         from bs4 import BeautifulSoup
+        from bs4 import XMLParsedAsHTMLWarning
+        import warnings
         
         urls: List[str] = []
         sitemap_url = urljoin(base_url, "/sitemap.xml")
         
         try:
+            # Suppress XML-as-HTML warning since sitemaps are XML
+            warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+            
             async with aiohttp.ClientSession() as session:
                 async with session.get(sitemap_url, timeout=10) as response:
                     if response.status == 200:

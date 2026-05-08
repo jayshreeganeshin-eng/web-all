@@ -371,6 +371,16 @@ class SiteCloner:
         domain_dir = self.output_dir / base_domain.replace('.', '_').replace(':', '_')
         domain_dir.mkdir(parents=True, exist_ok=True)
         
+        queue = [(start_url, 0)]
+        
+        # Calculate depth limit based on mode
+        depth_limit = self.depth
+        if mode == 'everything':
+            self.follow_external = True
+            self.include_subdomains = True
+            depth_limit = max(depth_limit, 8)
+            self.max_pages = max(self.max_pages, 1000)
+        
         # Save comprehensive manifest
         manifest = {
             "start_url": start_url,
@@ -390,15 +400,6 @@ class SiteCloner:
                 "include_subdomains": self.include_subdomains
             }
         }
-        
-        queue = [(start_url, 0)]
-        
-        depth_limit = self.depth
-        if mode == 'everything':
-            self.follow_external = True
-            self.include_subdomains = True
-            depth_limit = max(depth_limit, 8)
-            self.max_pages = max(self.max_pages, 1000)
 
         logger.info(f"🚀 Starting clone of {start_url}")
         logger.info(f"   Mode: {mode}, Depth: {depth_limit}, Output: {domain_dir}")

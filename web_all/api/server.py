@@ -27,7 +27,8 @@ app = FastAPI(title="web-all API", version="3.0.0")
 # GUI directory used for serving the frontend at /
 GUI_DIR: Optional[str] = None
 
-# Job storage
+# Job storage with max size limit to prevent memory leaks
+MAX_JOBS = 1000
 jobs: Dict[str, Dict[str, Any]] = {}
 
 # AI Configuration storage (in-memory, can be persisted)
@@ -42,6 +43,22 @@ ai_config: Dict[str, Any] = {
 # Output directory
 OUTPUT_DIR = Path("./output")
 OUTPUT_DIR.mkdir(exist_ok=True)
+
+
+def _cleanup_old_jobs():
+    """Remove old completed/failed jobs to prevent memory leaks."""
+    if len(jobs) >= MAX_JOBS:
+        # Sort by completion time and remove oldest
+        completed_jobs = [
+            (job_id, job_data) 
+            for job_id, job_data in jobs.items() 
+            if job_data.get("status") in ("completed", "failed")
+        ]
+        completed_jobs.sort(key=lambda x: x[1].get("completed_at", x[1].get("failed_at", "")))
+        
+        # Remove oldest half of completed jobs
+        for job_id, _ in completed_jobs[:len(completed_jobs)//2]:
+            del jobs[job_id]
 
 
 def validate_url(url: str) -> str:
@@ -197,6 +214,9 @@ async def create_clone_job(request: CloneRequest, background_tasks: BackgroundTa
         raise HTTPException(status_code=400, detail=str(exc))
 
     job_id = str(uuid.uuid4())
+    
+    # Cleanup old jobs before adding new one
+    _cleanup_old_jobs()
     
     jobs[job_id] = {
         "id": job_id,
