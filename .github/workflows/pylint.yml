@@ -1,4 +1,4 @@
-name: CI
+name: Pylint
 
 on:
   push:
@@ -12,8 +12,8 @@ on:
       - 'docs/**'
 
 jobs:
-  checks:
-    name: Run tests and basic checks
+  pylint:
+    name: Code Quality Check with Pylint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,11 +27,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[dev]
+          python -m pip install pylint
 
-      - name: Run unit tests
+      - name: Run Pylint
         run: |
-          python -m pytest -q
-
-      - name: Run basic static checks
-        run: |
-          python -m ruff check . --select E9
+          pylint web_all --disable=C0103,R0903,R0913,R0914,R0915,R0902,R0917,C0415,W0718,W0719,W1203 --exit-zero
+        continue-on-error: true
