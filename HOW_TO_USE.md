@@ -1,6 +1,6 @@
-# 🚀 web-all v4.2.0 - How to Use Guide
+# 🚀 web-all v4.5.0 - How to Use Guide
 
-[![Version](https://img.shields.io/badge/version-4.2.0-blue.svg)](https://pypi.org/project/web-all/)
+[![Version](https://img.shields.io/badge/version-4.5.0-blue.svg)](https://pypi.org/project/web-all/)
 [![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen.svg)](https://github.com/yourusername/web-all)
 
 ## 📋 Table of Contents
@@ -384,7 +384,7 @@ output/
 
 ---
 
-## 🌐 Multi-Language Support (v4.2.0)
+## 🌐 Multi-Language Support (v4.5.0)
 
 web-all now supports 11 languages for the GUI and CLI output.
 
@@ -454,4 +454,4 @@ cp web_all/locales/en.json web_all/locales/xx.json
 ---
 
 Made with ❤️ for the global community  
-*Version 4.2.0 - Production Ready*
+*Version 4.5.0 - Production Ready*

@@ -2,12 +2,12 @@
   "meta": {
     "language": "한국어",
     "code": "ko",
-    "version": "4.2.0"
+    "version": "4.5.0"
   },
   "app": {
     "name": "web-all",
     "tagline": "AI 기반 범용 웹사이트 클로너 및 크롤러",
-    "version_badge": "v4.2.0 with Worldwide Features"
+    "version_badge": "v4.5.0 with Worldwide Features"
   },
   "clone": {
     "starting": "🚀 {url} 복제 중...",

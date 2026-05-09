@@ -2,12 +2,12 @@
   "meta": {
     "language": "Español",
     "code": "es",
-    "version": "4.2.0"
+    "version": "4.5.0"
   },
   "app": {
     "name": "web-all",
     "tagline": "Clonador y Rastreador de Sitios Web con IA",
-    "version_badge": "v4.2.0 con Funciones Mundiales"
+    "version_badge": "v4.5.0 con Funciones Mundiales"
   },
   "clone": {
     "starting": "🚀 Clonando {url}...",

@@ -56,7 +56,7 @@ python3 -m playwright install-deps chromium
 ```bash
 # Check version
 web-all --version
-# Should output: web-all v4.2.0
+# Should output: web-all v4.5.0
 
 # Check help
 web-all --help

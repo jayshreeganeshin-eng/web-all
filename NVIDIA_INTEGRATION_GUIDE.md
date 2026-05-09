@@ -163,7 +163,7 @@ web-all serve -p 8000
 ### GUI Not Showing NVIDIA Option
 - Refresh the page (Ctrl+F5)
 - Clear browser cache
-- Ensure you're using web-all v4.2.0+
+- Ensure you're using web-all v4.5.0+
 
 ---
 
@@ -232,6 +232,6 @@ example, domain, documentation, web, testing
 
 ---
 
-**Version**: web-all v4.2.0+  
+**Version**: web-all v4.5.0+  
 **Last Updated**: 2024  
 **Support**: Open an issue on GitHub for assistance

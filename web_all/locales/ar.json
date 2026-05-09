@@ -2,13 +2,13 @@
   "meta": {
     "language": "العربية",
     "code": "ar",
-    "version": "4.2.0",
+    "version": "4.5.0",
     "rtl": true
   },
   "app": {
     "name": "web-all",
     "tagline": "استنساخ مواقع الويب العالمي المدعوم بالذكاء الاصطناعي",
-    "version_badge": "v4.2.0 with Worldwide Features"
+    "version_badge": "v4.5.0 with Worldwide Features"
   },
   "clone": {
     "starting": "🚀 جاري استنساخ {url}...",
