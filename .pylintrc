@@ -1,0 +1,52 @@
+[MASTER]
+# Specify a configuration file
+ignore-patterns=test_.*?py
+jobs=1
+
+[MESSAGES CONTROL]
+# Disable specific message categories to avoid false positives
+disable=
+    C0103,  # invalid-name (variable/constant naming issues)
+    C0115,  # missing-class-docstring (too strict)
+    C0116,  # missing-function-docstring (too strict)
+    C0301,  # line-too-long (use ruff instead)
+    C0303,  # trailing-whitespace (use ruff instead)
+    C0415,  # import-outside-toplevel (common in dynamic code)
+    E0401,  # import-error (fails with optional dependencies)
+    R0903,  # too-few-public-methods (false positives in classes)
+    R0913,  # too-many-arguments (legitimate for complex functions)
+    R0914,  # too-many-locals (acceptable for complex logic)
+    R0915,  # too-many-statements (acceptable for complex functions)
+    R0902,  # too-many-instance-attributes (legitimate for data classes)
+    R0917,  # too-many-positional-arguments (legitimate for complex functions)
+    R1705,  # no-else-return (stylistic preference)
+    R1720,  # no-else-raise (stylistic preference)
+    R1731,  # consider-using-max-builtin (stylistic)
+    W0108,  # unnecessary-lambda (can be legitimate)
+    W0602,  # global-variable-not-assigned (false positives)
+    W0603,  # global-statement (sometimes necessary)
+    W0612,  # unused-variable (can be intentional)
+    W0613,  # unused-argument (can be intentional in protocols)
+    W0621,  # redefined-outer-name (common pattern)
+    W0707,  # raise-missing-from (stylistic)
+    W0718,  # broad-exception-caught (practical necessity)
+    W0719,  # broad-exception-raised (practical necessity)
+    W1203,  # logging-fstring-interpolation (acceptable)
+    C0209,  # consider-using-f-string (stylistic)
+
+[REPORTS]
+# Set output format
+output-format=colorized
+fail-under=8.0
+
+[DESIGN]
+# Increase thresholds to match real-world complexity
+max-args=8
+max-attributes=10
+max-bool-expr=5
+max-branches=15
+max-locals=20
+max-parents=7
+max-public-methods=25
+max-returns=6
+max-statements=60
