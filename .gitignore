@@ -1,6 +1,9 @@
 ```
-# Build outputs
-output/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
 # Logs and temp files
 *.log
@@ -15,7 +18,7 @@ output/
 .vscode/
 .idea/
 
-# OS generated files
-.DS_Store
-Thumbs.db
+# Dependencies
+.venv/
+venv/
 ```
