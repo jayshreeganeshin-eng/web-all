@@ -3,6 +3,7 @@
 
 import argparse
 import asyncio
+import os
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -104,8 +105,6 @@ def main():
 
 def _handle_clone(args):
     """Handle clone command."""
-    from urllib.parse import urlparse
-
     from .core.cloner import SiteCloner
     from .core.invisible import InvisibleContentEngine
     from .utils.ai_engine import AIEngine
@@ -168,8 +167,6 @@ def _handle_clone(args):
                     ai_config["api_key"] = args.ai_key
                 elif args.ai_provider in ["openrouter", "groq", "huggingface", "nvidia"]:
                     # Try to get from environment
-                    import os
-
                     env_key_map = {
                         "openrouter": "OPENROUTER_API_KEY",
                         "groq": "GROQ_API_KEY",
@@ -248,8 +245,6 @@ def _handle_images(args):
 
 def _handle_text(args):
     """Handle text command."""
-    from urllib.parse import urlparse
-
     from bs4 import BeautifulSoup
 
     from .core.cloner import SiteCloner
@@ -284,8 +279,6 @@ def _handle_text(args):
 
 def _handle_serve(args):
     """Handle serve command."""
-    from pathlib import Path
-
     from .api.server import start_api
 
     gui_dir = None if args.no_gui else str(Path(__file__).parent / "gui")

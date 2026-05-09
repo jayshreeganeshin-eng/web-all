@@ -9,6 +9,8 @@ import hashlib
 import json
 import logging
 import os
+import statistics
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -116,7 +118,7 @@ class SiteCloner:
         """Configure session to use Tor proxy."""
         proxies = {"http": self.tor_proxy, "https": self.tor_proxy}
         self.session.proxies.update(proxies)
-        logger.info(f"Tor proxy enabled: {self.tor_proxy}")
+        logger.info("Tor proxy enabled: %s", self.tor_proxy)
 
     def _normalize_url(self, url: str) -> str:
         """Normalize URL for deduplication."""
@@ -193,8 +195,6 @@ class SiteCloner:
 
     async def fetch_page(self, url: str) -> Optional[str]:
         """Fetch page content with retry logic and performance tracking."""
-        import time
-
         start_time = time.perf_counter()
 
         async with self.semaphore:
@@ -205,10 +205,10 @@ class SiteCloner:
 
                 # Check robots.txt if enabled
                 if self.respect_robots and not self._check_robots_allowed(url):
-                    logger.info(f"Blocked by robots.txt: {url}")
+                    logger.info("Blocked by robots.txt: %s", url)
                     return None
 
-                logger.info(f"Fetching: {url}")
+                logger.info("Fetching: %s", url)
 
                 loop = asyncio.get_running_loop()
                 response = await loop.run_in_executor(
@@ -225,21 +225,18 @@ class SiteCloner:
 
                     return response.text
                 elif response.status_code == 304:  # Not modified (cached)
-                    logger.debug(f"Cache hit (304): {url}")
+                    logger.debug("Cache hit (304): %s", url)
                     return None
                 else:
-                    logger.warning(f"Failed to fetch {url}: {response.status_code}")
+                    logger.warning("Failed to fetch %s: %s", url, response.status_code)
                     return None
 
             except Exception as e:
-                logger.error(f"Error fetching {url}: {e}")
+                logger.error("Error fetching %s: %s", url, e)
                 return None
 
     def _check_robots_allowed(self, url: str) -> bool:
         """Check if URL is allowed by robots.txt with caching."""
-        import time
-        from urllib.parse import urlparse
-
         parsed = urlparse(url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -259,14 +256,12 @@ class SiteCloner:
             if response.status_code == 200:
                 allowed_paths = set()
                 lines = response.text.split("\n")
-                current_user_agent = None
                 found_matching_agent = False
 
                 for line in lines:
                     line = line.strip().lower()
                     if line.startswith("user-agent:"):
                         agent = line.split(":", 1)[1].strip()
-                        current_user_agent = agent
                         found_matching_agent = agent == "*" or agent in self.user_agent.lower()
                     elif line.startswith("disallow:") and found_matching_agent:
                         path = line.split(":", 1)[1].strip()
@@ -301,7 +296,7 @@ class SiteCloner:
                 if normalized in self.seen_urls:
                     return None
 
-                logger.info(f"Dynamic fetch: {url}")
+                logger.info("Dynamic fetch: %s", url)
 
                 try:
                     async with async_playwright() as p:
@@ -317,10 +312,12 @@ class SiteCloner:
                             )
                             page = await context.new_page()
 
-                            await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
+                            await page.goto(
+                                url, wait_until="networkidle", timeout=self.timeout * 1000
+                            )
 
                             # Scroll to trigger lazy loading
-                            for i in range(scroll_times):
+                            for _ in range(scroll_times):
                                 await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                                 await asyncio.sleep(wait_time)
 
@@ -332,23 +329,25 @@ class SiteCloner:
                             await browser.close()
                 except Exception as pw_error:
                     # Fallback to static fetch if Playwright fails (e.g., browser not installed)
-                    logger.warning(f"Playwright failed for {url}: {pw_error}. Falling back to static fetch.")
+                    logger.warning(
+                        "Playwright failed for %s: %s. Falling back to static fetch.",
+                        url, pw_error
+                    )
                     return await self.fetch_page_static_fallback(url)
 
             except Exception as e:
-                logger.error(f"Dynamic fetch error for {url}: {e}")
+                logger.error("Dynamic fetch error for %s: %s", url, e)
                 return None
 
     async def fetch_page_static_fallback(self, url: str) -> Optional[str]:
         """Fallback static fetch method when Playwright is unavailable."""
-        import time
         start_time = time.perf_counter()
         try:
             normalized = self._normalize_url(url)
             if normalized in self.seen_urls:
                 return None
 
-            logger.info(f"Static fallback fetch: {url}")
+            logger.info("Static fallback fetch: %s", url)
 
             loop = asyncio.get_running_loop()
             response = await loop.run_in_executor(
@@ -362,10 +361,10 @@ class SiteCloner:
                 self._perf_metrics["fetch"].append(elapsed)
                 return response.text
             else:
-                logger.warning(f"Static fallback failed {url}: {response.status_code}")
+                logger.warning("Static fallback failed %s: %s", url, response.status_code)
                 return None
         except Exception as e:
-            logger.error(f"Static fallback error for {url}: {e}")
+            logger.error("Static fallback error for %s: %s", url, e)
             return None
 
     def extract_links(self, html: str, base_url: str) -> List[str]:
@@ -450,14 +449,12 @@ class SiteCloner:
                     pass
 
         # Add metadata comment
-        meta_comment = f"<!-- Cloned from {url} on {datetime.now().isoformat()} -->\n"
+        meta_comment = "<!-- Cloned from %s on %s -->\n" % (url, datetime.now().isoformat())
         output_path.write_text(meta_comment + str(soup), encoding="utf-8")
-        logger.info(f"Saved: {output_path}")
+        logger.info("Saved: %s", output_path)
 
     def save_asset(self, url: str, asset_type: str):
         """Download and save asset with organized folder structure and optimized timeout."""
-        import time
-
         start_time = time.perf_counter()
 
         try:
@@ -483,18 +480,16 @@ class SiteCloner:
                 elapsed = time.perf_counter() - start_time
                 self._perf_metrics["download"].append(elapsed)
 
-                logger.info(f"Downloaded {asset_type}: {output_path.name}")
+                logger.info("Downloaded %s: %s", asset_type, output_path.name)
 
         except Exception as e:
             self.stats["errors"] += 1
             logger.debug(
-                f"Failed to download asset {url}: {e}"
+                "Failed to download asset %s: %s", url, e
             )  # Debug level for noisy asset errors
 
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Get performance statistics for the cloning session."""
-        import statistics
-
         metrics = {}
         for operation, times in self._perf_metrics.items():
             if times:
@@ -548,8 +543,8 @@ class SiteCloner:
 
         queue = [(start_url, 0)]
 
-        logger.info(f"🚀 Starting clone of {start_url}")
-        logger.info(f"   Mode: {mode}, Depth: {depth_limit}, Output: {domain_dir}")
+        logger.info("🚀 Starting clone of %s", start_url)
+        logger.info("   Mode: %s, Depth: %s, Output: %s", mode, depth_limit, domain_dir)
 
         # Handle depth=0 as unlimited (use max_pages limit instead)
         is_unlimited = depth_limit == 0
@@ -634,12 +629,12 @@ class SiteCloner:
             f.write("  manifest.json - Detailed clone information\n")
 
         logger.info("\n✅ Clone complete!")
-        logger.info(f"   📄 Pages visited: {self.stats['pages']}")
-        logger.info(f"   🖼️  Images downloaded: {self.stats['images']}")
-        logger.info(f"   🎨 CSS files: {self.stats['css']}")
-        logger.info(f"   ⚙️  JS files: {self.stats['js']}")
-        logger.info(f"   📦 Total assets: {len(self.downloaded_assets)}")
-        logger.info(f"   ❌ Errors: {self.stats['errors']}")
-        logger.info(f"   📁 Output: {domain_dir}")
+        logger.info("   📄 Pages visited: %s", self.stats["pages"])
+        logger.info("   🖼️  Images downloaded: %s", self.stats["images"])
+        logger.info("   🎨 CSS files: %s", self.stats["css"])
+        logger.info("   ⚙️  JS files: %s", self.stats["js"])
+        logger.info("   📦 Total assets: %s", len(self.downloaded_assets))
+        logger.info("   ❌ Errors: %s", self.stats["errors"])
+        logger.info("   📁 Output: %s", domain_dir)
 
         return manifest
