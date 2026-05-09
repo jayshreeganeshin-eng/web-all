@@ -1,6 +1,55 @@
-# 🌐 web-all v4.5.0 - Worldwide Web Cloning & Intelligence Platform
+Metadata-Version: 2.4
+Name: web-all
+Version: 4.5.0
+Summary: Universal Website Cloner with AI - Clone websites worldwide, discover hidden content, multi-language support, auto-organize assets
+Author-email: web-all Team <team@web-all.dev>
+License: MIT
+Project-URL: Homepage, https://github.com/web-all/web-all
+Project-URL: Documentation, https://github.com/web-all/web-all#readme
+Project-URL: Repository, https://github.com/web-all/web-all.git
+Project-URL: Issues, https://github.com/web-all/web-all/issues
+Keywords: website,cloner,crawler,scraper,downloader,archive,mirror,ai,tor,onion,multi-language,i18n,worldwide
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: aiohttp>=3.9.0
+Requires-Dist: beautifulsoup4>=4.12.0
+Requires-Dist: lxml>=5.0.0
+Requires-Dist: playwright>=1.40.0
+Requires-Dist: fastapi>=0.109.0
+Requires-Dist: uvicorn>=0.27.0
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: rich>=13.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23.0; extra == "dev"
+Requires-Dist: black>=24.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Provides-Extra: full
+Requires-Dist: torch>=2.0.0; extra == "full"
+Requires-Dist: transformers>=4.30.0; extra == "full"
+Requires-Dist: sentence-transformers>=2.2.0; extra == "full"
+Provides-Extra: gui
+Requires-Dist: fastapi>=0.109.0; extra == "gui"
+Requires-Dist: uvicorn>=0.27.0; extra == "gui"
+Requires-Dist: python-multipart>=0.0.6; extra == "gui"
+Provides-Extra: cli
 
-[![Version](https://img.shields.io/badge/version-4.5.0-blue.svg)](https://pypi.org/project/web-all/)
+# 🌐 web-all v4.2.0 - Worldwide Web Cloning & Intelligence Platform
+
+[![Version](https://img.shields.io/badge/version-4.2.0-blue.svg)](https://pypi.org/project/web-all/)
 [![Status](https://img.shields.io/badge/status-production%20ready-green.svg)](https://pypi.org/project/web-all/)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
@@ -10,7 +59,7 @@
 
 ---
 
-## ✨ Key Features (v4.5.0)
+## ✨ Key Features (v4.2.0)
 
 ### 🌍 Worldwide Support
 | Feature | Description |
@@ -62,14 +111,14 @@ python -m playwright install chromium
 ### Verify Installation
 ```bash
 web-all --version
-# Output: web-all v4.5.0
+# Output: web-all v4.2.0
 
 web-all --help
 ```
 
 ---
 
-## 🌐 Supported Languages (v4.5.0)
+## 🌐 Supported Languages (v4.2.0)
 
 | Code | Language | Native Name | Status |
 |------|----------|-------------|--------|
@@ -319,7 +368,7 @@ TIMEZONE=UTC
 MAX_DEPTH=5
 MAX_PAGES=1000
 CONCURRENT_CONNECTIONS=10
-USER_AGENT=web-all/4.5.0
+USER_AGENT=web-all/4.2.0
 
 # Tor Settings (optional)
 TOR_PROXY=socks5://127.0.0.1:9050
@@ -433,6 +482,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Built with ❤️ for the global community.**  
-*Version 4.5.0 - Production Ready*  
+*Version 4.2.0 - Production Ready*  
 *Last Updated: 2024*
 

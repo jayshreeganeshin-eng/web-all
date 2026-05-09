@@ -1,5 +1,5 @@
 """
-Internationalization (i18n) module for web-all v4.2.0
+Internationalization (i18n) module for web-all v4.5.0
 Provides multi-language support for worldwide users.
 """
 

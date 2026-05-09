@@ -2,12 +2,12 @@
   "meta": {
     "language": "Français",
     "code": "fr",
-    "version": "4.2.0"
+    "version": "4.5.0"
   },
   "app": {
     "name": "web-all",
     "tagline": "Cloneur de sites web universel alimenté par IA",
-    "version_badge": "v4.2.0 with Worldwide Features"
+    "version_badge": "v4.5.0 with Worldwide Features"
   },
   "clone": {
     "starting": "🚀 Clonage de {url}...",
