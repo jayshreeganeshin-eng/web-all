@@ -85,17 +85,17 @@ source "$VENV_DIR/bin/activate"
 # Upgrade pip in venv
 echo ""
 echo -e "${YELLOW}📦 Upgrading pip in virtual environment...${NC}"
-pip install --upgrade pip --quiet
+pip install --upgrade pip
 
 # Install web-all with full dependencies
 echo ""
 echo -e "${YELLOW}🔧 Installing web-all v4.5.0 with full dependencies...${NC}"
-pip install -e ".[full,gui]" --quiet
+pip install -e ".[full,gui]"
 
 # Install Playwright browsers
 echo ""
 echo -e "${YELLOW}🌐 Installing Chromium browser for Playwright...${NC}"
-playwright install chromium --quiet
+playwright install chromium
 
 echo ""
 echo -e "${GREEN}✅ Installation complete!${NC}"
