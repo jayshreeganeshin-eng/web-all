@@ -2,12 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
     paths:
       - 'web_all/**/*.py'
       - 'tests/**/*.py'
       - 'pyproject.toml'
   pull_request:
+    branches: [main, master]
     paths:
       - 'web_all/**/*.py'
       - 'tests/**/*.py'
@@ -24,6 +25,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
 
       - name: Install project and dev dependencies
         run: |
@@ -32,7 +34,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          python -m pytest -q
+          python -m pytest -q --tb=short
 
       - name: Verify version
         run: |

@@ -338,12 +338,10 @@ Respond ONLY with valid JSON."""
                 prompt, system_prompt="You are a data extraction expert. Return only valid JSON."
             )
             # Try to parse JSON from response
-            import json
-
             # Find JSON in response
             start = response.find("{")
             end = response.rfind("}") + 1
-            if start >= 0 and end > start:
+            if 0 <= start < end:
                 json_str = response[start:end]
                 return json.loads(json_str)
             return {}
