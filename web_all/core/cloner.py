@@ -31,7 +31,10 @@ logger = logging.getLogger(__name__)
 
 
 # Constants
-DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+DEFAULT_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
 DEFAULT_TOR_PROXY = "http://127.0.0.1:9050"
 DEFAULT_TIMEOUT = 30
 DEFAULT_CONCURRENCY = 5
@@ -259,14 +262,12 @@ class SiteCloner:
             if response.status_code == 200:
                 allowed_paths = set()
                 lines = response.text.split("\n")
-                current_user_agent = None
                 found_matching_agent = False
 
                 for line in lines:
                     line = line.strip().lower()
                     if line.startswith("user-agent:"):
                         agent = line.split(":", 1)[1].strip()
-                        current_user_agent = agent
                         found_matching_agent = agent == "*" or agent in self.user_agent.lower()
                     elif line.startswith("disallow:") and found_matching_agent:
                         path = line.split(":", 1)[1].strip()
@@ -294,7 +295,7 @@ class SiteCloner:
     async def fetch_page_dynamic(
         self, url: str, scroll_times: int = 3, wait_time: float = 2.0
     ) -> Optional[str]:
-        """Fetch page using headless browser for JavaScript rendering with fallback to static fetch."""
+        """Fetch page using headless browser for JS rendering with static fallback."""
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
@@ -317,11 +318,15 @@ class SiteCloner:
                             )
                             page = await context.new_page()
 
-                            await page.goto(url, wait_until="networkidle", timeout=self.timeout * 1000)
+                            await page.goto(
+                                url, wait_until="networkidle", timeout=self.timeout * 1000
+                            )
 
                             # Scroll to trigger lazy loading
                             for i in range(scroll_times):
-                                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                                await page.evaluate(
+                                    "window.scrollTo(0, document.body.scrollHeight)"
+                                )
                                 await asyncio.sleep(wait_time)
 
                             html = await page.content()
@@ -331,8 +336,11 @@ class SiteCloner:
                         finally:
                             await browser.close()
                 except Exception as pw_error:
-                    # Fallback to static fetch if Playwright fails (e.g., browser not installed)
-                    logger.warning(f"Playwright failed for {url}: {pw_error}. Falling back to static fetch.")
+                    # Fallback to static fetch if Playwright fails
+                    logger.warning(
+                        f"Playwright failed for {url}: {pw_error}. "
+                        "Falling back to static fetch."
+                    )
                     return await self.fetch_page_static_fallback(url)
 
             except Exception as e:
