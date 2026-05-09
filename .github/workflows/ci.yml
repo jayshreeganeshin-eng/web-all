@@ -35,5 +35,5 @@ jobs:
 
       - name: Run basic static checks
         run: |
-          python -m ruff check . --select E,F,W
+          python -m ruff check . --select E,F,W --exclude build,web_all.egg-info
         continue-on-error: true

@@ -21,11 +21,11 @@ def main():
         prog="web-all",
         description="Universal Website Cloner v4.2.0 - Download visible and invisible content",
     )
-    
+
     # Add version argument
     parser.add_argument(
-        "--version", 
-        action="version", 
+        "--version",
+        action="version",
         version="web-all v4.2.0"
     )
 
