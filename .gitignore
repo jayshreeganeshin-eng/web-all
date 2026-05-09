@@ -1,1 +1,9 @@
-Nothing should be ignored based on the provided file changes. The only modified file is a Python source file (`web_all/core/cloner.py`), which should not be added to .gitignore.
+```
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Output directories
+output/
+```
