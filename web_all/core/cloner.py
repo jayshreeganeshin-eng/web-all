@@ -9,22 +9,21 @@ import hashlib
 import json
 import logging
 import os
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse, urlunparse
 
+import requests
+from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 try:
-    import requests
-    from bs4 import BeautifulSoup
     from playwright.async_api import async_playwright
-except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Run: pip install requests beautifulsoup4 playwright")
-    raise
+except ImportError:
+    async_playwright = None  # type: ignore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -42,14 +41,14 @@ DEFAULT_DELAY = 0.5
 DEFAULT_DEPTH = 2
 MAX_PAGES = 1000
 ASSET_TYPES = {"images", "css", "js"}
+ROBOTS_CACHE_TTL = 3600  # 1 hour cache
 
 
 class SiteCloner:
     """Main website cloning engine with Tor support and automatic organization."""
 
     # Class-level cache for robots.txt to avoid repeated fetches
-    _robots_cache: Dict[str, tuple] = {}
-    ROBOTS_CACHE_TTL = 3600  # 1 hour cache
+    _robots_cache: Dict[str, Tuple[Set[str], float]] = {}
 
     def __init__(
         self,
@@ -69,6 +68,25 @@ class SiteCloner:
         enable_caching: bool = True,
         asset_timeout: Optional[int] = None,
     ):
+        """Initialize the site cloner.
+        
+        Args:
+            output_dir: Directory to save cloned content
+            depth: Crawl depth (0 = unlimited)
+            concurrency: Number of concurrent requests
+            delay: Delay between requests in seconds
+            user_agent: Custom User-Agent string
+            use_tor: Enable Tor proxy
+            tor_proxy: Tor proxy URL
+            timeout: Request timeout in seconds
+            respect_robots: Respect robots.txt rules
+            auto_organize: Auto-organize assets into folders
+            download_all_assets: Download all discovered assets
+            save_metadata: Save manifest and metadata files
+            max_pages: Maximum pages to crawl
+            enable_caching: Enable response caching
+            asset_timeout: Timeout for asset downloads (default: timeout/2)
+        """
         self.output_dir = Path(output_dir)
         self.depth = depth
         self.concurrency = concurrency
@@ -82,29 +100,16 @@ class SiteCloner:
         self.download_all_assets = download_all_assets
         self.save_metadata = save_metadata
         self.enable_caching = enable_caching
-        self.asset_timeout = asset_timeout or (timeout // 2)  # Faster timeout for assets
+        self.asset_timeout = asset_timeout or (timeout // 2)
 
         self.visited_urls: Set[str] = set()
         self.seen_urls: Set[str] = set()
         self.downloaded_assets: Set[str] = set()
         self.url_map: Dict[str, Path] = {}
-        self.session = requests.Session()
-        self.session.headers.update({"User-Agent": self.user_agent})
+        self.session = self._create_session()
         self.follow_external = False
         self.include_subdomains = True
         self.max_pages = max_pages
-
-        retry_strategy = Retry(
-            total=3,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS"],
-            backoff_factor=0.5,
-        )
-        adapter = HTTPAdapter(
-            max_retries=retry_strategy, pool_connections=concurrency, pool_maxsize=concurrency * 2
-        )
-        self.session.mount("http://", adapter)
-        self.session.mount("https://", adapter)
 
         if use_tor:
             self._setup_tor_proxy()
@@ -114,6 +119,27 @@ class SiteCloner:
 
         # Performance tracking
         self._perf_metrics: Dict[str, List[float]] = {"fetch": [], "save": [], "download": []}
+
+    def _create_session(self) -> requests.Session:
+        """Create and configure requests session with retry logic."""
+        session = requests.Session()
+        session.headers.update({"User-Agent": self.user_agent})
+
+        retry_strategy = Retry(
+            total=3,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "OPTIONS"],
+            backoff_factor=0.5,
+        )
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy,
+            pool_connections=self.concurrency,
+            pool_maxsize=self.concurrency * 2,
+        )
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
+        return session
 
     def _setup_tor_proxy(self):
         """Configure session to use Tor proxy."""
