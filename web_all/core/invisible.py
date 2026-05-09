@@ -65,10 +65,18 @@ class InvisibleContentEngine:
                 context = await browser.new_context(**context_args)
                 yield context
         finally:
+            # Close in reverse order: context, browser
+            # Pages are automatically closed when context is closed
             if context:
-                await context.close()
+                try:
+                    await context.close()
+                except Exception:
+                    pass
             if browser:
-                await browser.close()
+                try:
+                    await browser.close()
+                except Exception:
+                    pass
 
     async def expand_all_content(
         self,
@@ -291,7 +299,5 @@ class InvisibleContentEngine:
 
             except Exception as e:
                 logger.error(f"Error capturing requests: {e}")
-            finally:
-                await page.close()
 
         return requests_log
