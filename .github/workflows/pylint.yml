@@ -2,11 +2,12 @@ name: Pylint
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
   pull_request:
+    branches: [main, master]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
@@ -22,6 +23,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
 
       - name: Install project and dev dependencies
         run: |
@@ -31,5 +33,4 @@ jobs:
 
       - name: Run Pylint
         run: |
-          pylint web_all --disable=C0103,R0903,R0913,R0914,R0915,R0902,R0917,C0415,W0718,W0719,W1203 --exit-zero
-        continue-on-error: true
+          pylint web_all --disable=C0103,R0903,R0913,R0914,R0915,R0902,R0917,C0415,W0718,W0719,W1203
