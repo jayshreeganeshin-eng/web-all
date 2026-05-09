@@ -9,7 +9,9 @@ web_all.egg-info/dependency_links.txt
 web_all.egg-info/entry_points.txt
 web_all.egg-info/requires.txt
 web_all.egg-info/top_level.txt
+web_all/api/__init__.py
 web_all/api/server.py
+web_all/core/__init__.py
 web_all/core/cloner.py
 web_all/core/invisible.py
 web_all/gui/index.html
