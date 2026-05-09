@@ -229,13 +229,17 @@ class SiteCloner:
                     return response.text
                 elif response.status_code == 304:  # Not modified (cached)
                     logger.debug(f"Cache hit (304): {url}")
+                    self.seen_urls.add(normalized)
                     return None
                 else:
                     logger.warning(f"Failed to fetch {url}: {response.status_code}")
+                    self.seen_urls.add(normalized)  # Mark as seen to avoid retries
                     return None
 
             except Exception as e:
                 logger.error(f"Error fetching {url}: {e}")
+                normalized = self._normalize_url(url)
+                self.seen_urls.add(normalized)  # Mark as seen to avoid retries
                 return None
 
     def _check_robots_allowed(self, url: str) -> bool:
@@ -600,11 +604,12 @@ class SiteCloner:
                     if normalized in self.seen_urls:
                         continue
                     if self._should_follow_link(link, base_domain):
-                        self.seen_urls.add(normalized)
+                        # Add to queue first, then mark as seen
                         if len(self.visited_urls) + len(self.seen_urls) >= self.max_pages:
                             logger.info("Maximum page limit reached, stopping crawl.")
                             break
                         queue.append((link, current_depth + 1))
+                        self.seen_urls.add(normalized)
 
             await asyncio.sleep(self.delay)
 

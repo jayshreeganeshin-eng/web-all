@@ -1,0 +1,487 @@
+Metadata-Version: 2.4
+Name: web-all
+Version: 4.5.0
+Summary: Universal Website Cloner with AI - Clone websites worldwide, discover hidden content, multi-language support, auto-organize assets
+Author-email: web-all Team <team@web-all.dev>
+License: MIT
+Project-URL: Homepage, https://github.com/web-all/web-all
+Project-URL: Documentation, https://github.com/web-all/web-all#readme
+Project-URL: Repository, https://github.com/web-all/web-all.git
+Project-URL: Issues, https://github.com/web-all/web-all/issues
+Keywords: website,cloner,crawler,scraper,downloader,archive,mirror,ai,tor,onion,multi-language,i18n,worldwide
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: aiohttp>=3.9.0
+Requires-Dist: beautifulsoup4>=4.12.0
+Requires-Dist: lxml>=5.0.0
+Requires-Dist: playwright>=1.40.0
+Requires-Dist: fastapi>=0.109.0
+Requires-Dist: uvicorn>=0.27.0
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: rich>=13.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23.0; extra == "dev"
+Requires-Dist: black>=24.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Provides-Extra: full
+Requires-Dist: torch>=2.0.0; extra == "full"
+Requires-Dist: transformers>=4.30.0; extra == "full"
+Requires-Dist: sentence-transformers>=2.2.0; extra == "full"
+Provides-Extra: gui
+Requires-Dist: fastapi>=0.109.0; extra == "gui"
+Requires-Dist: uvicorn>=0.27.0; extra == "gui"
+Requires-Dist: python-multipart>=0.0.6; extra == "gui"
+Provides-Extra: cli
+
+# 🌐 web-all v4.5.0 - Worldwide Web Cloning & Intelligence Platform
+
+[![Version](https://img.shields.io/badge/version-4.5.0-blue.svg)](https://pypi.org/project/web-all/)
+[![Status](https://img.shields.io/badge/status-production%20ready-green.svg)](https://pypi.org/project/web-all/)
+[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen.svg)](https://github.com/yourusername/web-all)
+
+**web-all** is a production-grade, worldwide web cloning and intelligence platform designed for developers, researchers, and security professionals. It enables high-fidelity website cloning, hidden content discovery, AI-powered analysis, and multi-language support across 11+ languages.
+
+---
+
+## ✨ Key Features (v4.5.0)
+
+### 🌍 Worldwide Support
+| Feature | Description |
+|---------|-------------|
+| 🗣️ **Multi-Language Interface** | Full i18n support for 11 languages: EN, ES, FR, DE, ZH, JA, KO, RU, AR, PT, IT |
+| 🌐 **Global Asset Handling** | Automatic detection of international fonts, scripts, and RTL layouts |
+| 🧅 **Tor/.onion Support** | Native integration for cloning hidden services securely |
+| 🔤 **Unicode Support** | Full UTF-8 handling for all character sets |
+
+### 🕸️ Advanced Cloning Engine
+| Feature | Description |
+|---------|-------------|
+| 🌐 **Full Website Cloning** | Download complete websites with HTML, CSS, JS, images, fonts, videos |
+| 🔍 **Hidden Content Discovery** | Uncover content behind clicks, hovers, accordions, lazy-loading |
+| 🤖 **AI-Powered Analysis** | Auto-summarize, extract structured data, tag content (5 providers) |
+| 📱 **Dynamic Rendering** | Headless browser support for JavaScript-heavy SPAs |
+| 🗂️ **Auto-Organization** | Assets organized by type: /images, /css, /js, /fonts folders |
+| 📦 **ZIP Export** | Package cloned sites for easy sharing and archiving |
+| 🔄 **Smart Link Rewriting** | Automatic relative path conversion for offline browsing |
+
+### 🛠️ Developer Tools
+- **CLI** - Fast command-line interface with rich output
+- **Web GUI** - Beautiful, responsive browser-based dashboard with language selector
+- **REST API** - Programmatic access with job queue, status tracking, downloads
+- **Python SDK** - Import and use in your own Python projects
+
+---
+
+## 🚀 Installation
+
+### Method 1: Quick Install (Recommended)
+```bash
+pip install -e .
+python -m playwright install chromium
+```
+
+### Method 2: From PyPI
+```bash
+pip install web-all
+python -m playwright install chromium
+```
+
+### Method 3: With Full ML/AI Features
+```bash
+pip install "web-all[full]"
+python -m playwright install chromium
+```
+
+### Verify Installation
+```bash
+web-all --version
+# Output: web-all v4.5.0
+
+web-all --help
+```
+
+---
+
+## 🌐 Supported Languages (v4.5.0)
+
+| Code | Language | Native Name | Status |
+|------|----------|-------------|--------|
+| en | English | English | ✅ |
+| es | Spanish | Español | ✅ |
+| fr | French | Français | ✅ |
+| de | German | Deutsch | ✅ |
+| zh | Chinese | 中文 | ✅ |
+| ja | Japanese | 日本語 | ✅ |
+| ko | Korean | 한국어 | ✅ |
+| ru | Russian | Русский | ✅ |
+| ar | Arabic | العربية | ✅ (RTL) |
+| pt | Portuguese | Português | ✅ |
+| it | Italian | Italiano | ✅ |
+
+The GUI automatically detects your browser language. You can switch languages manually using the selector in the top-right corner.
+
+---
+
+## 📖 How to Use - Step by Step
+
+### 🟢 Level 1: Easy (Beginner)
+
+#### Clone a website with one command:
+```bash
+web-all clone https://example.com -o mysite
+```
+
+#### Start the Web GUI:
+```bash
+web-all serve
+# Open http://localhost:8000 in your browser
+```
+
+#### Download all images:
+```bash
+web-all images https://example.com -o images
+```
+
+#### Extract text content:
+```bash
+web-all text https://example.com -o text
+```
+
+---
+
+### 🟡 Level 2: Normal (Intermediate)
+
+#### Clone with deeper crawl:
+```bash
+web-all clone https://example.com -o mysite -d 5 -c 10
+```
+- `-d 5`: Crawl 5 levels deep
+- `-c 10`: Use 10 concurrent connections
+- `-d 0`: Crawl all pages in the domain (unlimited depth, bounded by `--max-pages`)
+
+#### Control page crawl size:
+```bash
+web-all clone https://example.com -o mysite --max-pages 500
+```
+This limits the number of pages crawled for large sites.
+
+#### Discover hidden content:
+```bash
+web-all clone https://example.com -o mysite --discover-invisible
+```
+
+#### Use dynamic rendering (for JavaScript sites):
+```bash
+web-all clone https://example.com -o mysite --dynamic
+```
+
+#### Run the everything capture:
+```bash
+web-all clone https://example.com -o mysite --everything
+```
+This enables dynamic rendering, hidden content discovery, a deeper site crawl, entire domain/subdomains capture, and automatically enables AI analysis when AI is configured.
+
+#### Enable AI analysis manually from CLI:
+```bash
+web-all clone https://example.com -o mysite --ai-enabled
+```
+
+#### Clone with multi-language support:
+```bash
+# The GUI auto-detects language, or set via environment
+export WEB_ALL_LANG=es  # Spanish interface
+web-all serve
+```
+
+#### Clone through Tor (for .onion sites):
+```bash
+web-all clone http://example.onion -o onion_site --tor
+```
+
+#### Start API server only (no GUI):
+```bash
+web-all serve --no-gui --port 8080
+```
+
+---
+
+### 🔴 Level 3: Advanced (Expert)
+
+#### Full clone with AI analysis:
+```bash
+# 1. Start server with AI enabled
+web-all serve
+
+# 2. Configure AI via API or GUI
+curl -X POST http://localhost:8000/api/v1/ai/config \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":true,"provider":"ollama","model":"llama3"}'
+
+# 3. Clone with AI
+curl -X POST http://localhost:8000/api/v1/clone \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com","depth":3,"ai_enabled":true}'
+```
+
+#### Use external AI providers:
+```bash
+# OpenRouter (free tier)
+curl -X POST http://localhost:8000/api/v1/ai/config \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":true,"provider":"openrouter","api_key":"your-key"}'
+
+# Groq Cloud
+curl -X POST http://localhost:8000/api/v1/ai/config \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":true,"provider":"groq","api_key":"your-key","model":"llama3-8b-8192"}'
+```
+
+#### Programmatic usage in Python:
+```python
+from web_all import SiteCloner, InvisibleContentEngine
+
+# Clone a site
+cloner = SiteCloner(output_dir="./output", depth=3)
+await cloner.clone_site("https://example.com")
+
+# Discover hidden content
+engine = InvisibleContentEngine()
+expanded_html = await engine.expand_all_content("https://example.com")
+```
+
+---
+
+## 📋 API Reference
+
+### REST Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/clone` | POST | Create clone job |
+| `/api/v1/jobs/{id}` | GET | Get job status |
+| `/api/v1/jobs` | GET | List all jobs |
+| `/api/v1/download/{id}` | GET | Download ZIP |
+| `/api/v1/ai/config` | POST/GET | Configure AI |
+| `/api/v1/ai/providers` | GET | List AI providers |
+
+### Example: Create Clone Job
+```bash
+curl -X POST http://localhost:8000/api/v1/clone \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "mode": "everything",
+    "depth": 5,
+    "discover_invisible": true
+  }'
+```
+
+### Example: Create Everything Capture Job
+```bash
+curl -X POST http://localhost:8000/api/v1/clone \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "everything": true,
+    "depth": 5
+  }'
+```
+
+---
+
+## 🗂️ Output Structure
+
+After cloning, your output directory will contain:
+```
+output/
+├── example_com/
+│   ├── index.html          # Main page
+│   ├── about/index.html    # Nested pages
+│   ├── images/             # All images
+│   ├── css/                # Stylesheets
+│   ├── js/                 # JavaScript files
+│   ├── manifest.json       # Clone metadata
+│   └── README.txt          # Summary report
+└── ...
+```
+
+---
+
+## 🤖 AI Features
+
+When AI is enabled, web-all can:
+- **Summarize** webpage content
+- **Extract structured data** (products, articles, contacts)
+- **Auto-tag** content with relevant keywords
+- **Clean HTML** by removing navigation/ads
+- **Multi-language analysis** in 11+ languages
+
+Supported providers:
+| Provider | Free Tier | API Key Required | Notes |
+|----------|-----------|------------------|-------|
+| Ollama | ✅ Yes (local) | ❌ No | Privacy-first, runs locally |
+| OpenRouter | ✅ Yes | ✅ Yes | Access to 100+ models |
+| Groq | ✅ Yes | ✅ Yes | Fastest inference |
+| HuggingFace | ✅ Yes | ✅ Yes | Open-source models |
+| NVIDIA NIM | ✅ Yes | ✅ Yes | Optimized for enterprise |
+
+---
+
+## ⚙️ Configuration
+
+Create a `.env` file in your project root:
+
+```ini
+# AI Providers
+OLLAMA_BASE_URL=http://localhost:11434
+OPENROUTER_API_KEY=your_key_here
+GROQ_API_KEY=your_key_here
+HUGGINGFACE_TOKEN=your_token_here
+NVIDIA_API_KEY=your_key_here
+
+# Server Settings
+HOST=0.0.0.0
+PORT=8000
+DEBUG=false
+
+# Language & Locale
+DEFAULT_LANG=en
+TIMEZONE=UTC
+
+# Cloning Defaults
+MAX_DEPTH=5
+MAX_PAGES=1000
+CONCURRENT_CONNECTIONS=10
+USER_AGENT=web-all/4.5.0
+
+# Tor Settings (optional)
+TOR_PROXY=socks5://127.0.0.1:9050
+```
+
+---
+
+## 🛡️ Ethics & Legal
+
+- ✅ Respects `robots.txt` (configurable)
+- ✅ Configurable rate limiting
+- ✅ User-agent identification
+- ✅ GDPR-compliant data handling
+- ⚠️ Always respect website terms of service
+- ⚠️ Use responsibly for legal purposes only
+- ⚠️ Do not use for copyright infringement
+
+---
+
+## 📦 Requirements
+
+- Python 3.9+
+- Playwright (auto-installed)
+- Optional: Tor Browser (for .onion sites)
+- Optional: Ollama/local AI (for AI features)
+- Optional: Node.js 18+ (for advanced frontend building)
+
+---
+
+## 🏗️ Project Structure
+
+```
+web-all/
+├── web_all/
+│   ├── core/           # Cloning engine, asset downloader
+│   ├── ai/             # AI providers, summarization logic
+│   ├── api/            # FastAPI REST server
+│   ├── gui/            # Web dashboard (HTML/CSS/JS)
+│   ├── i18n/           # Internationalization module
+│   ├── locales/        # Translation JSON files
+│   ├── cli.py          # Command-line interface
+│   └── utils.py        # Helpers, zip, logging
+├── tests/              # Pytest suite (37+ tests)
+├── pyproject.toml      # Project config & dependencies
+├── README.md           # This file
+├── LICENSE             # MIT License
+└── Dockerfile          # Container support
+```
+
+---
+
+## 🧪 Testing
+
+Run the full test suite:
+```bash
+pytest tests/ -v
+```
+
+Run with coverage:
+```bash
+pytest tests/ --cov=web_all --cov-report=html
+```
+
+All 37 tests must pass for production deployment.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions from the global community! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes and add tests
+4. Ensure all tests pass (`pytest tests/ -v`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+### Adding Translations
+To add a new language:
+1. Create a new JSON file in `web_all/locales/` (e.g., `fr.json`)
+2. Copy structure from `en.json`
+3. Translate all keys
+4. Add language code to `web_all/i18n/__init__.py`
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- Inspired by tools like `wget`, `HTTrack`, and modern headless browsers
+- AI integrations powered by LangChain and provider SDKs
+- UI design inspired by modern dashboard frameworks
+- Thanks to all contributors and the open-source community
+
+---
+
+## 📞 Support
+
+- **Documentation**: See `HOW_TO_USE.md` and `SPECIFICATION.md`
+- **Issues**: Report bugs on GitHub Issues
+- **Discussions**: Join GitHub Discussions for questions
+- **Email**: support@web-all.dev (for enterprise support)
+
+---
+
+**Built with ❤️ for the global community.**  
+*Version 4.5.0 - Production Ready*  
+*Last Updated: 2024*
+
