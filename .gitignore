@@ -1,1 +1,47 @@
-Nothing should be ignored based on the provided file changes. The only modified file is `install.sh`, which is a shell script and should not be ignored.
+```
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Directories
+output/
+.playwright-browsers/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Build
+dist/
+build/
+*.so
+*.dylib
+*.dll
+
+# Virtual environments
+venv/
+.venv/
+```
