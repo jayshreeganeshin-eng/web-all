@@ -1,5 +1,0 @@
-[console_scripts]
-wa = web_all.cli:main
-web-all = web_all.cli:main
-web-all-cli = web_all.cli:run_cli
-web-all-gui = web_all.cli:run_gui
