@@ -1,3 +1,0 @@
-[console_scripts]
-wa = web_all.cli:main
-web-all = web_all.cli:main

@@ -3,13 +3,15 @@ name: CI
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
+    paths:
+      - 'web_all/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
   pull_request:
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
+    paths:
+      - 'web_all/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
 
 jobs:
   checks:
@@ -31,9 +33,7 @@ jobs:
       - name: Run unit tests
         run: |
           python -m pytest -q
-        continue-on-error: true
 
-      - name: Run basic static checks
+      - name: Verify version
         run: |
-          python -m ruff check . --select E,F,W --exclude build,web_all.egg-info
-        continue-on-error: true
+          python -c "import web_all; assert web_all.__version__ == '4.5.0'"

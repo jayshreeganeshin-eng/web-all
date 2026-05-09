@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
+__version__ = "4.5.0"
+
 
 def _validate_url(url: str) -> str:
     parsed = urlparse(url)
@@ -15,18 +17,33 @@ def _validate_url(url: str) -> str:
     return url
 
 
+def run_gui():
+    """Entry point for GUI mode."""
+    from .api.server import start_api
+    gui_dir = str(Path(__file__).parent / "gui")
+    print(f"🌐 Starting web-all GUI v{__version__}...")
+    start_api(host="0.0.0.0", port=8000, gui_dir=gui_dir)
+
+
+def run_cli():
+    """Entry point for CLI mode (interactive)."""
+    print(f"🚀 web-all CLI v{__version__} - Interactive Mode")
+    print("=" * 50)
+    main()
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="web-all",
-        description="Universal Website Cloner v4.2.0 - Download visible and invisible content",
+        description=f"Universal Website Cloner v{__version__} - Download visible and invisible content",
     )
 
     # Add version argument
     parser.add_argument(
         "--version",
         action="version",
-        version="web-all v4.2.0"
+        version=f"web-all v{__version__}"
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -289,7 +306,7 @@ def _handle_serve(args):
     from .api.server import start_api
 
     gui_dir = None if args.no_gui else str(Path(__file__).parent / "gui")
-    print(f"🌐 Starting web-all server on http://{args.host}:{args.port}")
+    print(f"🌐 Starting web-all server v{__version__} on http://{args.host}:{args.port}")
     if gui_dir:
         print(f"   Serving GUI from {gui_dir}")
 

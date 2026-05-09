@@ -21,8 +21,8 @@ from ..utils.ai_engine import AIEngine, get_available_providers
 from ..utils.zip_utils import create_zip_archive
 
 app = FastAPI(
-    title="web-all API v4.2.0",
-    version="4.2.0",
+    title="web-all API v4.5.0",
+    version="4.5.0",
     description="Worldwide Website Cloner with Multi-Language Support & AI",
 )
 
@@ -189,8 +189,8 @@ async def root():
             return FileResponse(str(index_file), media_type="text/html")
 
     return {
-        "message": "web-all v4.2.0 API is running",
-        "version": "4.2.0",
+        "message": "web-all v4.5.0 API is running",
+        "version": "4.5.0",
         "features": [
             "Worldwide website cloning",
             "Multi-language support (11 languages)",
@@ -207,8 +207,8 @@ async def root():
 async def api_health():
     """API health check endpoint."""
     return {
-        "message": "web-all v4.2.0 API is running",
-        "version": "4.2.0",
+        "message": "web-all v4.5.0 API is running",
+        "version": "4.5.0",
         "status": "healthy"
     }
 

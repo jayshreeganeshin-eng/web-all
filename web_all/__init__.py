@@ -1,10 +1,10 @@
 """
-web-all v4.2.0: Universal Website Cloner & Crawler with Worldwide Features
+web-all v4.5.0: Universal Website Cloner & Crawler with Worldwide Features
 Supports clearnet, .onion (Tor), dynamic content, multi-language, and full site mirroring.
 Production-ready with enhanced AI integration and worldwide website support.
 """
 
-__version__ = "4.2.0"
+__version__ = "4.5.0"
 __author__ = "web-all Team"
 
 from .api.server import start_api
