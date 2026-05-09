@@ -203,7 +203,9 @@ class SiteCloner:
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
-                if normalized in self.seen_urls:
+                # Don't check seen_urls here - let the caller decide what to queue
+                # Only skip if already visited and processed
+                if normalized in self.visited_urls:
                     return None
 
                 # Check robots.txt if enabled
@@ -219,7 +221,7 @@ class SiteCloner:
                 )
 
                 if response.status_code == 200:
-                    self.seen_urls.add(normalized)
+                    # Mark as visited ONLY after successful fetch
                     self.visited_urls.add(normalized)
 
                     # Track performance
@@ -229,23 +231,21 @@ class SiteCloner:
                     return response.text
                 elif response.status_code == 304:  # Not modified (cached)
                     logger.debug(f"Cache hit (304): {url}")
-                    self.seen_urls.add(normalized)
+                    self.visited_urls.add(normalized)
                     return None
                 else:
                     logger.warning(f"Failed to fetch {url}: {response.status_code}")
-                    self.seen_urls.add(normalized)  # Mark as seen to avoid retries
+                    # Don't mark failed URLs as visited - allow retry on next pass
                     return None
 
             except Exception as e:
                 logger.error(f"Error fetching {url}: {e}")
-                normalized = self._normalize_url(url)
-                self.seen_urls.add(normalized)  # Mark as seen to avoid retries
+                # Don't mark failed URLs as visited - allow retry
                 return None
 
     def _check_robots_allowed(self, url: str) -> bool:
         """Check if URL is allowed by robots.txt with caching."""
         import time
-        from urllib.parse import urlparse
 
         parsed = urlparse(url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
@@ -303,7 +303,8 @@ class SiteCloner:
         async with self.semaphore:
             try:
                 normalized = self._normalize_url(url)
-                if normalized in self.seen_urls:
+                # Only skip if already visited and processed
+                if normalized in self.visited_urls:
                     return None
 
                 logger.info(f"Dynamic fetch: {url}")
@@ -334,7 +335,7 @@ class SiteCloner:
                                 await asyncio.sleep(wait_time)
 
                             html = await page.content()
-                            self.seen_urls.add(normalized)
+                            # Mark as visited ONLY after successful fetch
                             self.visited_urls.add(normalized)
                             return html
                         finally:
@@ -357,7 +358,8 @@ class SiteCloner:
         start_time = time.perf_counter()
         try:
             normalized = self._normalize_url(url)
-            if normalized in self.seen_urls:
+            # Only skip if already visited and processed
+            if normalized in self.visited_urls:
                 return None
 
             logger.info(f"Static fallback fetch: {url}")
@@ -368,7 +370,7 @@ class SiteCloner:
             )
 
             if response.status_code == 200:
-                self.seen_urls.add(normalized)
+                # Mark as visited ONLY after successful fetch
                 self.visited_urls.add(normalized)
                 elapsed = time.perf_counter() - start_time
                 self._perf_metrics["fetch"].append(elapsed)
@@ -601,7 +603,9 @@ class SiteCloner:
                 links = self.extract_links(html, current_url)
                 for link in links:
                     normalized = self._normalize_url(link)
-                    if normalized in self.seen_urls:
+                    # Only check against visited_urls and queue - don't check seen_urls here
+                    # because we want to allow URLs that were queued but not yet processed
+                    if normalized in self.visited_urls or normalized in [q[0] for q in queue]:
                         continue
                     if self._should_follow_link(link, base_domain):
                         # Add to queue first, then mark as seen
@@ -609,7 +613,7 @@ class SiteCloner:
                             logger.info("Maximum page limit reached, stopping crawl.")
                             break
                         queue.append((link, current_depth + 1))
-                        self.seen_urls.add(normalized)
+                        # Don't add to seen_urls here - it will be added after successful fetch
 
             await asyncio.sleep(self.delay)
 
