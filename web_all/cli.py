@@ -3,18 +3,61 @@
 
 import argparse
 import asyncio
+import os
 import sys
 from pathlib import Path
+from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 __version__ = "4.5.0"
 
 
 def _validate_url(url: str) -> str:
+    """Validate URL format."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         raise ValueError("Invalid URL. Use a valid http:// or https:// address.")
     return url
+
+
+def _get_ai_env_key(provider: str) -> Optional[str]:
+    """Get environment variable name for AI provider API key."""
+    env_key_map = {
+        "openrouter": "OPENROUTER_API_KEY",
+        "groq": "GROQ_API_KEY",
+        "huggingface": "HUGGINGFACE_API_KEY",
+        "nvidia": "NVIDIA_API_KEY",
+    }
+    return env_key_map.get(provider)
+
+
+def _build_ai_config(args: argparse.Namespace) -> Dict[str, Any]:
+    """Build AI configuration from command-line arguments."""
+    ai_config: Dict[str, Any] = {
+        "enabled": True,
+        "provider": args.ai_provider,
+        "base_url": "http://localhost:11434" if args.ai_provider == "ollama" else None,
+    }
+
+    # Add API key if provided or from environment
+    if args.ai_key:
+        ai_config["api_key"] = args.ai_key
+    elif args.ai_provider in ["openrouter", "groq", "huggingface", "nvidia"]:
+        env_key = _get_ai_env_key(args.ai_provider)
+        if env_key:
+            api_key = os.environ.get(env_key)
+            if api_key:
+                ai_config["api_key"] = api_key
+            else:
+                print(
+                    f"⚠️ No API key for {args.ai_provider}. "
+                    f"Set --ai-key or {env_key} env var."
+                )
+
+    if args.ai_model:
+        ai_config["model"] = args.ai_model
+
+    return ai_config
 
 
 def run_gui():
@@ -147,6 +190,7 @@ def _handle_clone(args):
     )
 
     async def run():
+        # Handle "everything" mode
         if args.everything:
             print(
                 "⚡ Running full capture: dynamic rendering, hidden content, "
@@ -158,6 +202,7 @@ def _handle_clone(args):
             if args.depth < 4:
                 args.depth = 4
 
+        # Discover invisible content if requested
         if args.discover_invisible:
             print("🔍 Discovering invisible content...")
             engine = InvisibleContentEngine(use_tor=args.tor)
@@ -167,43 +212,14 @@ def _handle_clone(args):
             output_path.write_text(expanded, encoding="utf-8")
             print(f"✓ Saved expanded content to {output_path}")
 
+        # Clone the site
         mode = "dynamic" if args.dynamic else "static"
         await cloner.clone_site(args.url, mode=mode)
 
+        # Run AI analysis if enabled
         if args.ai_enabled:
             try:
-                ai_config = {
-                    "enabled": True,
-                    "provider": args.ai_provider,
-                    "base_url": "http://localhost:11434" if args.ai_provider == "ollama" else None,
-                }
-
-                # Add API key if provided or required
-                if args.ai_key:
-                    ai_config["api_key"] = args.ai_key
-                elif args.ai_provider in ["openrouter", "groq", "huggingface", "nvidia"]:
-                    # Try to get from environment
-                    import os
-
-                    env_key_map = {
-                        "openrouter": "OPENROUTER_API_KEY",
-                        "groq": "GROQ_API_KEY",
-                        "huggingface": "HUGGINGFACE_API_KEY",
-                        "nvidia": "NVIDIA_API_KEY",
-                    }
-                    env_key = os.environ.get(env_key_map.get(args.ai_provider, ""))
-                    if env_key:
-                        ai_config["api_key"] = env_key
-                    else:
-                        msg = (
-                            f"⚠️ No API key for {args.ai_provider}. "
-                            f"Set --ai-key or {env_key_map.get(args.ai_provider, '')} env var."
-                        )
-                        print(msg)
-
-                if args.ai_model:
-                    ai_config["model"] = args.ai_model
-
+                ai_config = _build_ai_config(args)
                 ai_engine = AIEngine(ai_config)
                 parsed = urlparse(args.url)
                 index_html = Path(args.output) / parsed.netloc.replace(".", "_") / "index.html"
